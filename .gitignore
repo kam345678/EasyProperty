@@ -1,0 +1,18 @@
+# root
+node_modules
+.env
+.env.local
+.env.development
+.env.production
+
+# logs
+*.log
+
+# mac
+.DS_Store
+
+# windows
+Thumbs.db
+
+# build
+dist
