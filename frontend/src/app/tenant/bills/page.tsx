@@ -13,7 +13,7 @@ export default function BillsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100 p-4 sm:p-8 pb-24 sm:pb-8">
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-6 text-2xl sm:text-3xl font-extrabold text-gray-800 tracking-tight">
+        <h1 className="mb-6 text-2xl sm:text-3xl font-extrabold text-gray-801 tracking-tight">
           ใบแจ้งหนี้ของฉัน
         </h1>
 
