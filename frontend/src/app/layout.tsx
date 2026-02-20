@@ -1,26 +1,9 @@
-import { ReactNode } from "react";
+import "../styles/globals.css";
 
-export const metadata = {
-  title: "EasyProperty",
-  description: "Property Management System",
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <div className="flex h-screen">
-          <div className="flex flex-1 flex-col">
-            <main className="flex-1 overflow-y-auto p-6">
-              {children}
-            </main>
-          </div>
-        </div>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

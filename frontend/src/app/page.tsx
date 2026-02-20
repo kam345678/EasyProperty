@@ -1,13 +1,26 @@
+import { AuthProvider } from '@/context/AuthContext'
 
-export default function HomePage() {
-    return (   
-        <div className="flex h-screen">
-            <div className="flex flex-1 flex-col">
-                <main className="flex-1 overflow-y-auto p-6">
-                    <h1 className="text-2xl font-bold mb-4">Welcome to the Home page</h1>
-                    <p className="text-gray-600">Use the sidebar to navigate through different sections of the dashboard.</p>
-                </main>
-            </div>
+export default function Home() {
+  return (
+    <AuthProvider>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100 p-8">
+        <div className="mx-auto max-w-6xl">
+          {/* HEADER */}
+          <div className="relative mb-10 overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 to-blue-600 p-10 text-white shadow-2xl">
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/20 blur-3xl"></div>
+            <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-white/20 blur-3xl"></div>
+
+            <h1 className="text-4xl font-extrabold tracking-tight">EasyProperty Tenant Portal</h1>
+            <p className="mt-3 text-lg text-indigo-100">Manage your room and payments easily</p>
+          </div>
+
+          {/* Tenant content: keep page-specific UI here */}
+          <div>
+            {/* Previously this app redirected to /admin; tenant UI can be extended here. */}
+            <p className="text-slate-700">Welcome to the EasyProperty Tenant portal.</p>
+          </div>
         </div>
-    );
+      </div>
+    </AuthProvider>
+  )
 }
