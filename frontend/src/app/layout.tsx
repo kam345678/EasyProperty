@@ -14,6 +14,6 @@ export default function RootLayout({
           {children}
         </AuthProvider>
       </body>
-    </html>
+    </html> /// IGNORE ///
   )
 }
