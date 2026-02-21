@@ -106,5 +106,10 @@ Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
     $ npm install @nestjs/config
     $ npm install uuid
     $ npm install class-validator class-transformer
-    $ npm install bcrypt
+    
   ```
+## cloudinary
+```bash 
+  $ npm install cloudinary multer multer-storage-cloudinary
+  $ npm install -D @types/multer
+```

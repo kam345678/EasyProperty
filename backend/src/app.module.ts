@@ -8,7 +8,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-
+import { AppService } from './app.service';
+import { UploadModule } from './upload/upload.module';
+import { RoomsModule } from './rooms/rooms.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -36,8 +38,10 @@ import { AuthModule } from './auth/auth.module';
     }),
     UsersModule,
     AuthModule,
+    UploadModule,
+    RoomsModule,
   ],
   controllers: [AppController],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

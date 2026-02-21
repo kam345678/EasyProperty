@@ -1,25 +1,20 @@
-import { ReactNode } from "react";
+import "../styles/globals.css";
 
 export const metadata = {
   title: "EasyProperty",
-  description: "Property Management System",
+  description: "ระบบจัดการห้องพัก",
 };
 
 export default function RootLayout({
   children,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
+  // ย้ายคอมเมนต์มาไว้ตรงนี้แทนครับ
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light" style={{ colorScheme: 'light' }}>
       <body>
-        <div className="flex h-screen">
-          <div className="flex flex-1 flex-col">
-            <main className="flex-1 overflow-y-auto p-6">
-              {children}
-            </main>
-          </div>
-        </div>
+        {children}
       </body>
     </html>
   );

@@ -26,14 +26,30 @@ export class User {
   @Prop({ type: String, select: false, default: null })
   refreshTokenHash?: string | null;
 
-  @Prop({ type: Object, default: null })
+  @Prop({
+    type: {
+      fullName: { type: String, default: null },
+      phone: { type: String, default: null },
+      idCardNumber: { type: String, default: null },
+      avatar: {
+        url: { type: String, default: null },
+        publicId: { type: String, default: null },
+      },
+      _id: false,
+      birthDate: { type: Date, default: null },
+    },
+    default: null,
+  })
   profile: {
-    fullName: string;
-    phone: string;
-    idCardNumber: string;
-    avatarUrl: string;
-    birthDate: Date; // 👈 เพิ่มอันนี้
-  };
+    fullName: string | null;
+    phone: string | null;
+    idCardNumber: string | null;
+    avatar: {
+      url: string | null;
+      publicId: string | null;
+    };
+    birthDate: Date | null;
+  } | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
