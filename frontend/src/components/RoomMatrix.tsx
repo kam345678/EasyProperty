@@ -38,7 +38,7 @@ export default function RoomMatrix({ floors }: { floors: Floor[] }) {
 
   return (
     <>
-      <div className="bg-white p-6 rounded-xl shadow board">
+      <div className="bg-white p-4 sm:p-6 rounded-xl shadow board max-w-full">
         <h2 className="text-xl font-bold mb-4">Room Status</h2>
 
        {/* ภายใน floors.map */}
@@ -50,12 +50,12 @@ export default function RoomMatrix({ floors }: { floors: Floor[] }) {
       {floor.floor}th Floor
     </h3>
 
-    <div className="flex gap-2 flex-wrap border-b-3 border-slate-200 pb-4">
+    <div className="flex gap-2 flex-wrap border-b-3 border-slate-200 pb-4 overflow-x-auto">
       {floor.rooms.map((room) => (
         <div
           key={room.id}
           onClick={() => setSelectedRoom(room)}
-          className={`cursor-pointer w-14 h-10 rounded-lg shadow-sm text-white flex items-center justify-center text-xs font-bold transition-transform hover:scale-105 active:scale-95 ${statusColor[room.status]}`}
+          className={`cursor-pointer w-10 h-8 sm:w-14 sm:h-10 min-w-[40px] rounded-lg shadow-sm text-white flex items-center justify-center text-xs sm:text-xs font-bold transition-transform hover:scale-105 active:scale-95 ${statusColor[room.status]}`}
         >
           {room.roomNumber}
         </div>
