@@ -1,0 +1,74 @@
+import {
+  Controller,
+  Post,
+  Patch,
+  UseGuards,
+  Body,
+  Get,
+  Req,
+} from '@nestjs/common';
+import { JwtPayload } from 'src/auth/types/jwt-payload.type';
+import { Request } from '@nestjs/common';
+import { UsersService } from './users.service';
+import { CreateUserByAdminDto } from './dto/user.dto';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
+
+interface JwtRequest extends Request {
+  user: JwtPayload;
+}
+
+@Controller('users')
+export class UserController {
+  constructor(private readonly usersService: UsersService) {}
+
+  //=========> create Account by admin for tenant
+  @Post('admin/create-user')
+  @Roles('admin')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  createByAdmin(@Body() dto: CreateUserByAdminDto) {
+    return this.usersService.createUserByAdmin(dto);
+  }
+
+  //=========> reset password
+  @Patch('me/password')
+  @Roles('tenant', 'admin')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  async changePassword(
+    @Req() req: JwtRequest,
+    @Body('oldPassword') oldPassword: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    // console.log('USER FROM TOKEN:', req.user);
+    // console.log('OLD PASSWORD:', oldPassword);
+    // console.log('NEW PASSWORD:', newPassword);
+
+    return this.usersService.changePassword(
+      req.user.userId,
+      oldPassword,
+      newPassword,
+    );
+  }
+
+  // ====================> แก้ไขรูป avatar
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles('tenant', 'admin')
+  @Patch('me/avatar')
+  updateMyAvatar(
+    @Req() req: JwtRequest,
+    @Body('avatarUrl') avatarUrl: string,
+    @Body('avatarPublicId') avatarPublicId: string,
+  ) {
+    return this.usersService.updateAvatar(
+      req.user.userId,
+      avatarUrl,
+      avatarPublicId,
+    );
+  }
+
+  @Get()
+  getHello(): string {
+    return 'Hello World!';
+  }
+}
