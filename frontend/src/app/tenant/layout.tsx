@@ -3,6 +3,8 @@
 import { Bell, Home, FileText, Wrench, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 
 export default function TenantLayout({
   children,
@@ -11,9 +13,27 @@ export default function TenantLayout({
 }) {
   const pathname = usePathname();
 
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const res = await fetchWithAuth("http://localhost:3000/api/v1/auth/profile");
+        if (!res.ok) return;
+
+        const data = await res.json();
+        setUser(data);
+      } catch (err) {
+        console.error("Failed to load user:", err);
+      }
+    }
+
+    loadUser();
+  }, []);
+
   return (
     // ครอบด้วย div เพื่อจัดการให้เมนูอยู่ล่างสุดเสมอถ้าเนื้อหาน้อย
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-gray-50 justify-center">
       
       {/* ================= TOP NAVIGATION BAR (Desktop) ================= */}
       <header className="sticky top-0 z-40 hidden border-b border-gray-200 bg-white shadow-sm md:block">
@@ -63,10 +83,20 @@ export default function TenantLayout({
               </button>
               
               <div className="flex cursor-pointer items-center gap-2 border-l border-gray-200 pl-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-600">
-                  U
+                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-sm font-bold text-indigo-600">
+                  {user?.profile?.avatar.url ? (
+                    <img
+                      src={user.profile.avatar.url}
+                      alt="avatar"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    user?.profile?.fullName?.charAt(0) || "U"
+                  )}
                 </div>
-                <span className="hidden text-sm font-medium sm:block">ห้อง 301</span>
+                <span className="hidden text-sm font-medium sm:block">
+                  {user?.profile?.fullName || "Loading..."}
+                </span>
               </div>
             </div>
 

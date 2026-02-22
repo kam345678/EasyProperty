@@ -32,13 +32,14 @@ export class AuthController {
 
   @UseGuards(AccessTokenGuard)
   @Get('profile')
-  getProfile(
+  async getProfile(
     @Req()
     req: Request & {
       user: { sub: string; email: string; role: string };
     },
   ) {
-    return req.user;
+    const userId = req.user.sub;
+    return this.authService.getProfile(userId);
   }
 
   @UseGuards(RefreshTokenGuard)
