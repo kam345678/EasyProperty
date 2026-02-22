@@ -7,7 +7,7 @@ import { Home, Calendar, FileText, Wrench, BarChart2 } from 'lucide-react'
 const items = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
-  { href: '/admin/invoices', label: 'Invoices', icon: FileText },
+  { href: '/admin/Invoices', label: 'Invoices', icon: FileText },
   { href: '/admin/maintenance', label: 'Maintenance', icon: Wrench },
   { href: '/admin/reports', label: 'Reports', icon: BarChart2 },
 ]
