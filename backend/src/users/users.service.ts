@@ -182,4 +182,9 @@ export class UsersService {
       },
     };
   }
+
+  /* ========== ส่งprofile ให้auth =============== */
+  async findById(id: string) {
+    return this.userModel.findById(id).select('-passwordHash').exec();
+  }
 }
