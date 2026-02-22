@@ -1,3 +1,11 @@
+import { Module } from '@nestjs/common'
+import { BookingModule } from './booking/booking.module'
+import { PrismaModule } from './prisma/prisma.module'
+
+@Module({
+  imports: [PrismaModule, BookingModule],
+})
+export class AppModule {}
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 
