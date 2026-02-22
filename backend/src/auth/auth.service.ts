@@ -103,8 +103,8 @@ export class AuthService {
       user.passwordHash,
       dto.password,
     );
-
     if (!passwordMatches) throw new UnauthorizedException('รหัสผ่านไม่ถูกต้อง');
+
     const tokens = await this.signTokens({
       id: String(user._id),
       email: user.email,
@@ -145,5 +145,21 @@ export class AuthService {
     await this.usersService.setRefreshTokenHash(userId, null);
 
     return { success: true };
+  }
+
+  async getProfile(userId: string) {
+    console.log('JWT userId:', userId);
+    const user = await this.usersService.findById(userId);
+    console.log('DB user:', user);
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    return {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      profile: user.profile, // ถ้ามี
+    };
   }
 }
