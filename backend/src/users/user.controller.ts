@@ -39,6 +39,7 @@ export class UserController {
     @Req() req: JwtRequest,
     @Body('oldPassword') oldPassword: string,
     @Body('newPassword') newPassword: string,
+    @Body('confirmNewpassword') confirmNewpassword: string,
   ) {
     console.log('CHANGE PASSWORD HIT');
     console.log('USER FROM TOKEN:', req.user);
@@ -49,6 +50,7 @@ export class UserController {
       req.user.sub,
       oldPassword,
       newPassword,
+      confirmNewpassword,
     );
   }
 
