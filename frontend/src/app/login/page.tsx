@@ -3,7 +3,6 @@
 import Image from "next/image"
 import { useState, ChangeEvent, FormEvent } from "react"
 import { signIn } from "@/lib/api";
-import { getProfile } from "@/lib/auth";
 
 export default function Home() {
   const [mode, setMode] = useState<"login"| "forgot">("login")
@@ -15,17 +14,27 @@ export default function Home() {
     if (e) e.preventDefault();
     setError(null);
     try {
-      const data = await signIn({ email, password });
-      console.log("Login success:", data);
+      const data = await signIn(email, password);
+      console.log("Login response:", data);
+
+      // ถ้า backend ส่ง error กลับมา
+      if (data?.error) {
+        setError(
+          Array.isArray(data.error) ? data.error[0] : data.error
+        );
+        return;
+      }
+
+      // กันกรณี structure ไม่ถูกต้อง
+      if (!data?.access_token || !data?.user) {
+        setError("Login response ไม่ถูกต้อง");
+        return;
+      }
 
       localStorage.setItem("accessToken", data.access_token);
       localStorage.setItem("refreshToken", data.refresh_token);
 
-      const user = await getProfile();
-      console.log("Profile:", user);
-
-
-      if (user.role === "admin") {
+      if (data.user.role === "admin") {
         window.location.href = "/admin";
       } else {
         window.location.href = "/tenant/dashboard";

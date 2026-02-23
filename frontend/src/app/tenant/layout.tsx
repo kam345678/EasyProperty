@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
-
 export default function TenantLayout({
   children,
 }: {
@@ -13,17 +12,12 @@ export default function TenantLayout({
 }) {
   const pathname = usePathname();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any | null>(null);
 
   useEffect(() => {
     async function loadUser() {
       try {
-        const res = await fetchWithAuth(
-          "http://localhost:3000/api/v1/auth/profile",
-        );
-        if (!res.ok) return;
-
-        const data = await res.json();
+        const data = await fetchWithAuth("/auth/profile");
         setUser(data);
       } catch (err) {
         console.error("Failed to load user:", err);
@@ -88,6 +82,7 @@ export default function TenantLayout({
                 <span className="absolute right-0 top-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
               </button>
 
+              <Link href="/tenant/account">
               <div className="flex cursor-pointer items-center gap-2 border-l border-gray-200 pl-4">
                 <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-sm font-bold text-indigo-600">
                   {user?.profile?.avatar.url ? (
@@ -104,6 +99,7 @@ export default function TenantLayout({
                   {user?.profile?.fullName || "Loading..."}
                 </span>
               </div>
+              </Link>
             </div>
           </div>
         </div>
