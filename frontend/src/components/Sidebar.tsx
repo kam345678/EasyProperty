@@ -2,13 +2,25 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Calendar, FileText, Wrench, BarChart2 } from 'lucide-react'
+import {
+  Home,
+  Calendar,
+  FileText,
+  Wrench,
+  BarChart2,
+  DollarSign,
+  UserPlus,
+  CreditCard
+} from 'lucide-react'
 
 const items = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
-  { href: '/admin/Invoices', label: 'Invoices', icon: FileText },
+  { href: '/admin/invoices', label: 'Invoices', icon: FileText },
   { href: '/admin/maintenance', label: 'Maintenance', icon: Wrench },
+  { href: '/admin/income-expenses', label: 'Income & Expenses', icon: DollarSign },
+  { href: '/admin/register', label: 'Register', icon: UserPlus },
+  { href: '/admin/billing', label: 'Billing', icon: CreditCard },
   { href: '/admin/reports', label: 'Reports', icon: BarChart2 },
 ]
 
