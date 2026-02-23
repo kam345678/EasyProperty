@@ -1,7 +1,6 @@
 "use client"
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { Home, Calendar, FileText, Wrench, BarChart2 } from 'lucide-react'
 
 const items = [
@@ -12,8 +11,11 @@ const items = [
   { href: '/admin/reports', label: 'Reports', icon: BarChart2 },
 ]
 
-export default function Sidebar() {
-  const pathname = usePathname()
+interface SidebarProps {
+  pathname: string;
+}
+
+export default function Sidebar({ pathname }: SidebarProps) {
 
   return (
     <aside className="w-60 bg-slate-900 text-slate-100 h-full flex flex-col p-6">
