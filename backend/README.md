@@ -96,3 +96,20 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## สิ่งที่ต้องติดตั้ง aute & users
+  ```bash
+    $ npm install @nestjs/mongoose mongoose
+    $ npm install @nestjs/throttler
+    $ npm install @nestjs/jwt @nestjs/passport passport passport-jwt
+    $ npm install argon2
+    $ npm install @nestjs/config
+    $ npm install uuid
+    $ npm install class-validator class-transformer
+    
+  ```
+## cloudinary
+```bash 
+  $ npm install cloudinary multer multer-storage-cloudinary
+  $ npm install -D @types/multer
+```

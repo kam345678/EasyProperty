@@ -1,28 +1,49 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { MaintenanceModule } from './maintenance/maintenance.module';
 
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { AppService } from './app.service';
+import { UploadModule } from './upload/upload.module';
+import { RoomsModule } from './rooms/rooms.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 @Module({
   imports: [
-    // โหลดค่าจากไฟล์ .env
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
 
-    // เชื่อมต่อ MongoDB อ้างอิงจากเอกสารบทที่ 4
+    // ตั้งค่า rate limiting โดยใช้ ThrottlerModule
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60,
+          limit: 10,
+        },
+      ],
+    }),
+
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
+
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
+
+      useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('MONGO_URI'),
       }),
     }),
-
-    // ลงทะเบียน Module แจ้งซ่อม
+    UsersModule,
+    AuthModule,
+    UploadModule,
+    RoomsModule,
     MaintenanceModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
-export class AppModule {}
+export class AppModule { }
