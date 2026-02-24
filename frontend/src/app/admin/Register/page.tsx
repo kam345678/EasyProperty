@@ -14,17 +14,39 @@ export default function RegisterTenantPage() {
     startDate: '',
     endDate: '',
     deposit: '',
-    birthDate: '', // สำคัญมาก: เพราะ NestJS ใช้ตัวนี้เจนรหัสผ่าน
+    birthDate: '', // สำคัญ: NestJS ใช้ตัวนี้เจนรหัสผ่าน
     email: ''
   })
 
+  const [rooms, setRooms] = useState<any[]>([]) // เก็บข้อมูลห้องจาก DB
   const [isLoading, setIsLoading] = useState(false)
   const [registrationResult, setRegistrationResult] = useState<{
     username: string;
     tempPassword: string;
   } | null>(null)
 
+  // 1. ดึงข้อมูลห้องพักที่มีสถานะ available จากฐานข้อมูลจริง
   useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch('http://localhost:3000/rooms?status=available', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setRooms(data);
+        }
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+      }
+    };
+
+    fetchRooms();
+
+    // ตั้งค่าวันเริ่มสัญญาเป็นปัจจุบัน
     const now = new Date().toISOString().split('T')[0]
     setFormData(prev => ({ ...prev, startDate: now }))
   }, [])
@@ -38,10 +60,9 @@ export default function RegisterTenantPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // ดึง Token จาก LocalStorage (ต้องมีเพื่อให้ผ่าน RolesGuard 'admin')
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    const token = localStorage.getItem('access_token');
 
-    // จัด Payload ให้ตรงตาม CreateUserByAdminDto และ ProfileDto
+    // 2. จัด Payload ให้ตรงตาม CreateUserByAdminDto และ ProfileDto ของคุณ
     const payload = {
       email: formData.email,
       role: 'tenant',
@@ -49,14 +70,14 @@ export default function RegisterTenantPage() {
         fullName: formData.fullName,
         phone: formData.phone,
         idCardNumber: formData.idCard,
-        birthDate: formData.birthDate, // ส่งรูปแบบ YYYY-MM-DD
+        birthDate: formData.birthDate,
         avatarUrl: null,
         avatarPublicId: null
       }
     }
 
     try {
-      // ยิงไปที่ Endpoint ใน UserController ของคุณ
+      // 3. ยิง API ไปที่ UsersController
       const response = await fetch('http://localhost:3000/users/admin/create-user', {
         method: 'POST',
         headers: {
@@ -69,18 +90,18 @@ export default function RegisterTenantPage() {
       const result = await response.json()
 
       if (response.ok) {
-        // ปรับการรับค่าให้ตรงกับ UsersService (result.user.email และ result.temporaryPassword)
+        // ดึงค่า temporaryPassword ตามชื่อที่เขียนไว้ใน users.service.ts
         setRegistrationResult({
-          username: result.user?.email || result.username,
+          username: result.user?.email || formData.email,
           tempPassword: result.temporaryPassword 
         })
-        alert("ลงทะเบียนผู้เช่าสำเร็จ! รหัสผ่านถูกสร้างจากชื่ออีเมลและวันเกิด")
+        alert("ลงทะเบียนผู้เช่าและสร้างบัญชีสำเร็จ!")
       } else {
-        alert(result.message || "เกิดข้อผิดพลาดในการบันทึก")
+        alert(result.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล")
       }
     } catch (error) {
-      console.error("Fetch error:", error)
-      alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้")
+      console.error("Submit error:", error)
+      alert("ไม่สามารถเชื่อมต่อกับ Server ได้")
     } finally {
       setIsLoading(false)
     }
@@ -88,6 +109,7 @@ export default function RegisterTenantPage() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-100 font-sans overflow-hidden">
+
       <main className="flex-1 overflow-auto custom-scrollbar">
         <div className="p-6 max-w-[1400px] mx-auto space-y-6 pb-12">
 
@@ -103,14 +125,14 @@ export default function RegisterTenantPage() {
                 ลงทะเบียนผู้เช่าและจัดทำสัญญา
               </h1>
               <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-                ระบบจะสร้างรหัสผ่านให้อัตโนมัติโดยใช้ <span className="text-blue-400 font-bold">ชื่ออีเมล + วันเกิด</span> ของผู้เช่า
+                เลือกห้องพักจากฐานข้อมูลและระบุข้อมูลผู้เช่า รหัสผ่านจะถูกสร้างจาก <span className="text-blue-400 font-bold">อีเมล + วันเกิด</span>
               </p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row items-stretch gap-0 bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden font-sans">
 
-            {/* Box 1: ฝั่งซ้าย - กรอกข้อมูล */}
+            {/* Box 1: ฝั่งซ้าย - ข้อมูลผู้เช่า */}
             <div className="lg:flex-[1.5] flex flex-col border-r border-slate-200 bg-white">
               <div className="p-6 border-b border-slate-300 bg-slate-50/50 flex items-center gap-2 font-black text-slate-800 uppercase text-sm tracking-wider">
                 <UserCheck size={20} className="text-blue-600" />
@@ -119,14 +141,26 @@ export default function RegisterTenantPage() {
 
               <div className="p-8 space-y-6 flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm font-medium">
+                  
+                  {/* --- หมายเลขห้องพัก ดึงจาก DB --- */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">หมายเลขห้องพัก</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">หมายเลขห้องพัก (จากระบบ)</label>
                     <div className="relative">
                       <Home className="absolute left-4 top-3 text-slate-400" size={16} />
-                      <select name="roomNumber" value={formData.roomNumber} required onChange={handleInputChange} className="w-full p-3 pl-10 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-blue-500 appearance-none">
-                        <option value="">เลือกห้องพัก...</option>
-                        <option value="501">ห้อง 501</option>
-                        <option value="502">ห้อง 502</option>
+                      <select 
+                        name="roomNumber" 
+                        value={formData.roomNumber} 
+                        required 
+                        onChange={handleInputChange} 
+                        className="w-full p-3 pl-10 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-blue-500 appearance-none"
+                      >
+                        <option value="">เลือกห้องพักที่ว่าง...</option>
+                        {rooms.map((room) => (
+                          <option key={room._id} value={room.roomNumber}>
+                            ห้อง {room.roomNumber} - {room.roomType.toUpperCase()} (฿{room.prices.toLocaleString()})
+                          </option>
+                        ))}
+                        {rooms.length === 0 && <option disabled>ไม่มีห้องว่างในฐานข้อมูล</option>}
                       </select>
                     </div>
                   </div>
@@ -164,7 +198,7 @@ export default function RegisterTenantPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">อีเมล (Username)</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">อีเมล (ใช้เป็น Username)</label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-3 text-slate-400" size={16} />
                       <input type="email" name="email" value={formData.email} required onChange={handleInputChange} placeholder="email@example.com" className="w-full p-3 pl-10 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm shadow-sm" />
@@ -193,7 +227,7 @@ export default function RegisterTenantPage() {
                   <button 
                     type="submit" 
                     disabled={isLoading}
-                    className={`w-full ${isLoading ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white py-4 rounded-2xl font-black text-base shadow-lg shadow-blue-200 flex items-center justify-center gap-3 transition-all active:scale-[0.97] group`}
+                    className={`w-full ${isLoading ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700'} text-white py-4 rounded-2xl font-black text-base shadow-lg shadow-blue-200 flex items-center justify-center gap-3 transition-all active:scale-[0.97] group`}
                   >
                     <span>{isLoading ? 'กำลังประมวลผล...' : 'ยืนยันการลงทะเบียน'}</span>
                     {!isLoading && <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />}
@@ -202,7 +236,7 @@ export default function RegisterTenantPage() {
               </div>
             </div>
 
-            {/* Box 2: ฝั่งขวา - ผลลัพธ์จากเซิร์ฟเวอร์ */}
+            {/* Box 2: ฝั่งขวา - ข้อมูลเข้าระบบจาก Backend */}
             <div className={`lg:flex-1 flex flex-col transition-all duration-500 ${registrationResult ? 'bg-emerald-50/50' : 'bg-slate-50/30'}`}>
               <div className="p-6 border-b border-slate-300 bg-slate-50/50 flex items-center gap-2 font-black text-slate-800 uppercase text-sm tracking-wider">
                 <Lock size={18} className="text-blue-600" />
@@ -211,7 +245,7 @@ export default function RegisterTenantPage() {
 
               <div className="p-8 space-y-6 flex-1 flex flex-col justify-center">
                 <div className="space-y-4">
-                  <div className={`p-5 bg-white border rounded-2xl shadow-sm space-y-3 transition-all ${registrationResult ? 'border-emerald-200' : 'border-slate-200'}`}>
+                  <div className={`p-5 bg-white border rounded-2xl shadow-sm space-y-3 transition-all ${registrationResult ? 'border-emerald-200 shadow-emerald-100' : 'border-slate-200'}`}>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อผู้ใช้งาน (Username)</p>
                     <div className="flex items-center justify-between">
                       <span className={`text-lg font-black ${registrationResult ? 'text-emerald-700' : 'text-slate-400 italic'}`}>
@@ -221,10 +255,10 @@ export default function RegisterTenantPage() {
                     </div>
                   </div>
 
-                  <div className={`p-5 bg-white border rounded-2xl shadow-sm space-y-3 transition-all ${registrationResult ? 'border-emerald-200 shadow-md' : 'border-slate-200'}`}>
+                  <div className={`p-5 bg-white border rounded-2xl shadow-sm space-y-3 transition-all ${registrationResult ? 'border-emerald-200 shadow-emerald-100' : 'border-slate-200'}`}>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">รหัสผ่านชั่วคราว (Temporary Password)</p>
                     <div className="flex items-center justify-between font-mono">
-                      <span className={`text-xl font-bold ${registrationResult ? 'text-blue-600 tracking-wider' : 'text-slate-300'}`}>
+                      <span className={`text-xl font-bold ${registrationResult ? 'text-blue-600 animate-pulse' : 'text-slate-300'}`}>
                         {registrationResult?.tempPassword || '********'}
                       </span>
                       <Lock size={20} className={registrationResult ? 'text-blue-500' : 'text-slate-300'} />
@@ -235,17 +269,13 @@ export default function RegisterTenantPage() {
                 <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 space-y-3">
                   <div className="flex items-center gap-2 text-blue-700 font-bold text-xs uppercase">
                     <ShieldCheck size={16} />
-                    System Notice
+                    Security Notice
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed">
                     {registrationResult 
-                      ? "สร้างบัญชีสำเร็จ! รหัสผ่านนี้คือ [อีเมล prefix + วันเกิด] โปรดแจ้งให้ผู้เช่าทราบ" 
-                      : "รหัสผ่านจะถูกสร้างโดยอัตโนมัติจากข้อมูลที่คุณกรอก และจะแสดงที่นี่หลังจากบันทึกสำเร็จ"}
+                      ? "สร้างบัญชีสำเร็จ! รหัสผ่านคือ [อีเมล prefix + วันเกิด] โปรดแจ้งให้ผู้เช่าทราบ" 
+                      : "เมื่อกดลงทะเบียน ระบบ NestJS จะสุ่มสร้างรหัสผ่านและคืนค่ามาแสดงที่นี่"}
                   </p>
-                </div>
-
-                <div className="mt-auto pt-6 border-t border-slate-200 italic text-[10px] text-slate-400 text-center uppercase tracking-tighter">
-                  {registrationResult ? 'Status: Data Synchronized' : 'Status: Waiting for Input'}
                 </div>
               </div>
             </div>
@@ -253,7 +283,7 @@ export default function RegisterTenantPage() {
 
           <footer className="flex justify-between items-center px-4 pt-8 border-t border-slate-200 opacity-40 text-[9px] font-bold uppercase tracking-widest">
             <p>EasyProperty System v2.0</p>
-            <p suppressHydrationWarning>SYNC_ID: {formData.roomNumber || 'PENDING'}</p>
+            <p suppressHydrationWarning>SYNC: {formData.roomNumber || 'PENDING'}</p>
           </footer>
         </div>
       </main>
