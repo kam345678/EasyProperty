@@ -6,17 +6,17 @@ import { Model } from 'mongoose';
 import { Contract, ContractDocument } from './schemas/contract.schema';
 import { CreateContractDto } from './dto/create-contract.dto';
 // ต้อง import Room Schema เข้ามาด้วยเพื่อให้ TypeScript รู้จัก Type
-// import { Room, RoomDocument } from '../rooms/schemas/room.schema'; 
+// import { Room, RoomDocument } from '../rooms/schemas/room.schema';
 
 @Injectable()
 export class ContractsService {
   constructor(
     @InjectModel(Contract.name)
     private contractModel: Model<ContractDocument>,
-    
+
     // 🔥 เพิ่มการ Inject Room Model เพื่อใช้จัดการสถานะห้อง
-    @InjectModel('Room') 
-    private roomModel: Model<any>, 
+    @InjectModel('Room')
+    private roomModel: Model<any>,
   ) {}
 
   async create(createDto: CreateContractDto) {
@@ -53,7 +53,7 @@ export class ContractsService {
           currentTenant: createDto.tenantId, // เก็บ ID ผู้เช่าไว้ที่ห้อง
         },
       },
-      { new: true } // คืนค่าข้อมูลที่อัปเดตแล้ว
+      { new: true }, // คืนค่าข้อมูลที่อัปเดตแล้ว
     );
 
     return savedContract;
@@ -92,6 +92,8 @@ export class ContractsService {
     });
 
     const deleted = await this.contractModel.findByIdAndDelete(id);
-    return { message: 'Contract deleted successfully and Room is now available' };
+    return {
+      message: 'Contract deleted successfully and Room is now available',
+    };
   }
 }
