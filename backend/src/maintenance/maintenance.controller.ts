@@ -1,6 +1,11 @@
-import { 
-  Controller, Post, Body, UploadedFile, UseInterceptors, 
-  ParseFilePipe, MaxFileSizeValidator 
+import {
+  Controller,
+  Post,
+  Body,
+  UploadedFile,
+  UseInterceptors,
+  ParseFilePipe,
+  MaxFileSizeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MaintenanceService } from './maintenance.service';
@@ -21,7 +26,8 @@ export class MaintenanceController {
           new MaxFileSizeValidator({ maxSize: 2 * 1024 * 1024 }), // 2MB
         ],
       }),
-    ) file?: any,
+    )
+    file?: any,
   ) {
     return this.maintenanceService.create(dto, file);
   }

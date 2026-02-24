@@ -11,8 +11,10 @@ import { Maintenance, MaintenanceSchema } from './entities/maintenance.entity';
 @Module({
   imports: [
     // เชื่อมต่อ MongoDB Schema
-    MongooseModule.forFeature([{ name: Maintenance.name, schema: MaintenanceSchema }]),
-    
+    MongooseModule.forFeature([
+      { name: Maintenance.name, schema: MaintenanceSchema },
+    ]),
+
     // ตั้งค่า Multer สำหรับอัปโหลดรูป
     MulterModule.register({
       storage: diskStorage({
