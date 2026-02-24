@@ -2,15 +2,45 @@
 
 
 import Link from 'next/link'
+<<<<<<< HEAD
+<<<<<<< HEAD
+import { usePathname } from 'next/navigation'
+import {
+  Home,
+  Calendar,
+  FileText,
+  Wrench,
+  BarChart2,
+  DollarSign,
+  UserPlus,
+  CreditCard
+} from 'lucide-react'
+=======
 import { Home, Calendar, FileText, Wrench, BarChart2, Receipt, UserPlus } from 'lucide-react'
+>>>>>>> 6c782dfd1d5e0872116e82da51fd1982870d3a1d
+=======
+import { Home, Calendar, FileText, Wrench, BarChart2, Receipt, UserPlus, CreditCard, DollarSign } from 'lucide-react'
+>>>>>>> 8954b07f7150e7490c8e3148015ed5b7723177f7
 
 const items = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
+<<<<<<< HEAD
+<<<<<<< HEAD
+  { href: '/admin/invoices', label: 'Invoices', icon: FileText },
+=======
   { href: '/admin/billing', label: 'Billing', icon: Receipt },
   { href: '/admin/Invoices', label: 'Invoices', icon: FileText },
   { href: '/admin/Register', label: 'Register Tenant', icon: UserPlus},
+>>>>>>> 6c782dfd1d5e0872116e82da51fd1982870d3a1d
+=======
+  { href: '/admin/Invoices', label: 'Invoices', icon: FileText },
+  { href: '/admin/Register', label: 'Register Tenant', icon: UserPlus},
+>>>>>>> 8954b07f7150e7490c8e3148015ed5b7723177f7
   { href: '/admin/maintenance', label: 'Maintenance', icon: Wrench },
+  { href: '/admin/income-expenses', label: 'Income & Expenses', icon: DollarSign},
+  { href: '/admin/register', label: 'Register', icon: UserPlus },
+  { href: '/admin/billing', label: 'Billing', icon: CreditCard },
   { href: '/admin/reports', label: 'Reports', icon: BarChart2 },
 ]
 
