@@ -12,6 +12,7 @@ import { AppService } from './app.service';
 import { UploadModule } from './upload/upload.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
+import { ContractsModule } from './contracts/contracts.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -42,8 +43,9 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
     UploadModule,
     RoomsModule,
     MaintenanceModule,
+    ContractsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
-export class AppModule { }
+export class AppModule {}
