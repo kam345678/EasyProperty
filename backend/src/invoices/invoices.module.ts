@@ -8,4 +8,4 @@ import { Invoice, InvoiceSchema } from './schemas/invoice.schema';
     MongooseModule.forFeature([{ name: Invoice.name, schema: InvoiceSchema }]),
   ],
 })
-export class InvoicesModule {} 
+export class InvoicesModule {}

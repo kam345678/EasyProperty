@@ -1,8 +1,15 @@
 // src/maintenance/maintenance.service.ts
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Maintenance, MaintenanceDocument } from './entities/maintenance.entity';
+import {
+  Maintenance,
+  MaintenanceDocument,
+} from './entities/maintenance.entity';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 
 @Injectable()
@@ -11,8 +18,8 @@ export class MaintenanceService {
   private readonly logger = new Logger(MaintenanceService.name);
 
   constructor(
-    @InjectModel(Maintenance.name) 
-    private maintenanceModel: Model<MaintenanceDocument>
+    @InjectModel(Maintenance.name)
+    private maintenanceModel: Model<MaintenanceDocument>,
   ) {}
 
   async create(dto: CreateMaintenanceDto, file?: any) {
@@ -40,17 +47,16 @@ export class MaintenanceService {
 
       // 3. บันทึกลงฐานข้อมูล
       const savedData = await newRecord.save();
-      
+
       console.log('Successfully saved to DB:', savedData._id);
       console.log('--- Debug End ---');
-      
-      return savedData;
 
+      return savedData;
     } catch (error) {
       // 4. พ่น Error จริงๆ ออกมาที่ Terminal
       this.logger.error('===== DATABASE SAVE ERROR =====');
       this.logger.error(error.message); // บอกสาเหตุ เช่น ต่อ DB ไม่ติด หรือ Schema ผิด
-      this.logger.error(error.stack);   // บอกบรรทัดที่เกิดปัญหา
+      this.logger.error(error.stack); // บอกบรรทัดที่เกิดปัญหา
       this.logger.error('================================');
 
       // ส่ง Error กลับไปหา Postman/Frontend ให้เห็นข้อความที่ชัดเจนขึ้น

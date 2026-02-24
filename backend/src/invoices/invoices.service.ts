@@ -1,46 +1,120 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Invoice } from './schemas/invoice.schema';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { PayInvoiceDto } from './dto/pay-invoice.dto';
+import { Contract } from '../contracts/schemas/contract.schema';
+import { Room } from '../rooms/schemas/room.schema';
 
 @Injectable()
 export class InvoicesService {
   constructor(
     @InjectModel(Invoice.name) private invoiceModel: Model<Invoice>,
+    @InjectModel(Contract.name) private contractModel: Model<Contract>,
+    @InjectModel(Room.name) private roomModel: Model<Room>,
   ) {}
 
+  // Admin creates monthly invoice
   async create(dto: CreateInvoiceDto) {
-    // 1. คำนวณค่าน้ำ: (ใหม่ - เก่า) * ราคาต่อหน่วย
-    const waterUsed = dto.meters.water.current - dto.meters.water.previous;
-    const waterTotal = waterUsed * dto.meters.water.unitPrice;
+    const contract = await this.contractModel
+      .findById(dto.contractId)
+      .populate('roomId tenantId');
 
-    // 2. คำนวณค่าไฟ: (ใหม่ - เก่า) * ราคาต่อหน่วย
-    const electricUsed = dto.meters.electric.current - dto.meters.electric.previous;
-    const electricTotal = electricUsed * dto.meters.electric.unitPrice;
+    if (!contract) throw new NotFoundException('Contract not found');
 
-    // 3. คำนวณยอดรวมทั้งสิ้น
-    const grandTotal = dto.amounts.rent + waterTotal + electricTotal + dto.amounts.serviceFee;
+    const room = contract.roomId as any;
 
-    // 4. บันทึกลง Database
-    const newInvoice = new this.invoiceModel({
-      ...dto,
+    const waterPrevious = room.lastMeterReading.water;
+    const electricPrevious = room.lastMeterReading.electric;
+
+    const waterUsed = dto.meters.water.current - waterPrevious;
+    const electricUsed = dto.meters.electric.current - electricPrevious;
+
+    if (waterUsed < 0 || electricUsed < 0) {
+      throw new BadRequestException(
+        'Meter value cannot be lower than previous',
+      );
+    }
+
+    const waterTotal = waterUsed * room.waterPrice;
+    const electricTotal = electricUsed * room.electricPrice;
+
+    const grandTotal =
+      dto.amounts.rent + dto.amounts.serviceFee + waterTotal + electricTotal;
+
+    const invoice = new this.invoiceModel({
+      contractId: contract._id,
+      roomId: room._id,
+      tenantId: contract.tenantId,
+      billingPeriod: dto.billingPeriod,
+      meters: {
+        water: {
+          previous: waterPrevious,
+          current: dto.meters.water.current,
+          unitPrice: room.waterPrice,
+        },
+        electric: {
+          previous: electricPrevious,
+          current: dto.meters.electric.current,
+          unitPrice: room.electricPrice,
+        },
+      },
       amounts: {
         rent: dto.amounts.rent,
-        waterTotal: waterTotal,
-        electricTotal: electricTotal,
         serviceFee: dto.amounts.serviceFee,
-        grandTotal: grandTotal,
+        waterTotal,
+        electricTotal,
+        grandTotal,
       },
-      payment: {
-        status: 'pending', // เริ่มต้นเป็นค้างชำระเสมอ
-      },
+      payment: { status: 'pending' },
     });
 
-    return await newInvoice.save();
+    // update last meter reading
+    room.lastMeterReading.water = dto.meters.water.current;
+    room.lastMeterReading.electric = dto.meters.electric.current;
+    await room.save();
+
+    return invoice.save();
+  }
+
+  // Tenant uploads slip
+  async pay(invoiceId: string, dto: PayInvoiceDto) {
+    const invoice = await this.invoiceModel.findById(invoiceId);
+    if (!invoice) throw new NotFoundException('Invoice not found');
+
+    invoice.payment = {
+      status: 'paid_pending_review',
+      slipUrl: dto.slipUrl,
+      paidAt: new Date(dto.paidAt),
+    };
+
+    return invoice.save();
+  }
+
+  // Admin confirms or rejects payment
+  async confirm(
+    invoiceId: string,
+    adminId: string,
+    status: 'paid' | 'rejected',
+  ) {
+    const invoice = await this.invoiceModel.findById(invoiceId);
+    if (!invoice) throw new NotFoundException('Invoice not found');
+
+    invoice.payment.status = status;
+    invoice.payment.confirmedBy = adminId;
+
+    return invoice.save();
   }
 
   async findAll() {
-    return await this.invoiceModel.find().exec();
+    return this.invoiceModel
+      .find()
+      .populate('roomId tenantId contractId')
+      .exec();
   }
 }

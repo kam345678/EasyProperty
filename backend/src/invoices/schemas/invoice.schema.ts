@@ -52,7 +52,11 @@ export class Invoice extends Document {
   // ข้อมูลการชำระเงิน
   @Prop({
     type: {
-      status: { type: String, enum: ['pending', 'paid', 'overdue'], default: 'pending' },
+      status: {
+        type: String,
+        enum: ['pending', 'paid', 'overdue'],
+        default: 'pending',
+      },
       slipUrl: String,
       paidAt: Date,
       confirmedBy: { type: Types.ObjectId },
