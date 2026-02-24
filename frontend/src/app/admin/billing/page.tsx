@@ -1,237 +1,356 @@
-"use client"
-
-
-import { useState, useEffect } from 'react'
-import AdminTopNav from "@/components/AdminTopNav"
-import { 
-  ReceiptText, 
-  Home, 
-  Plus, 
-  Trash2, 
-  Calendar, 
-  User, 
-  MessageSquare,
-  Send,
-  X,
-  ChevronDown
-} from 'lucide-react'
+'use client'
+import { useEffect, useState } from "react"
+import api from "@/lib/api"
 
 export default function BillingPage() {
-  // --- 1. ข้อมูลจำลองรายการห้องพัก ---
-  const availableRooms = [
-    { id: '501', name: 'คุณจิรายุ ตั้งศรีสุข', email: 'jirayu.t@email.com' },
-    { id: '502', name: 'คุณนีน่า มานะ', email: 'nina.m@email.com' },
-    { id: '403', name: 'คุณสมชาย สายลุย', email: 'somchai.s@email.com' },
-    { id: '305', name: 'คุณวิภา ใจดี', email: 'wipa.j@email.com' },
-  ]
+  const [contracts, setContracts] = useState<any[]>([])
+  const [selectedRoomId, setSelectedRoomId] = useState<string>("")
 
-  // --- 2. State Management ---
-  const [selectedRoomId, setSelectedRoomId] = useState('502')
-  const [items, setItems] = useState([
-    { id: 1, description: 'ค่าเช่าห้องประจำเดือน', amount: 5000 },
-    { id: 2, description: 'ค่าน้ำ (เหมาจ่าย)', amount: 200 },
-  ])
-  const [dueDate, setDueDate] = useState('')
-  const [note, setNote] = useState('')
+  const currentRoom = contracts.find(
+    (c) => c.roomId?._id === selectedRoomId
+  )
 
-  // ป้องกัน Hydration Error สำหรับวันที่
+  // ----- DTO FIELDS (อ้างอิง create-invoice.dto ฝั่ง BE) -----
+
+  const rent = Number(currentRoom?.roomId?.prices || 0)
+
+  const [waterCurrent, setWaterCurrent] = useState<string>('')
+
+  const [electricCurrent, setElectricCurrent] = useState<string>('')
+
+  const [serviceFee, setServiceFee] = useState(0)
+
+  const [billingPeriod, setBillingPeriod] = useState('')
+  const [contractId, setContractId] = useState('')
+
   useEffect(() => {
-    setDueDate(new Date().toISOString().split('T')[0])
+    const fetchContracts = async () => {
+      try {
+        const res = await api.get("/contracts")
+        // กรองเฉพาะ contract ที่ active
+        const activeContracts = res.data.filter(
+          (c: any) => c.status === "active"
+        )
+        setContracts(activeContracts)
+
+        if (activeContracts.length > 0) {
+          setSelectedRoomId(activeContracts[0].roomId._id)
+          setContractId(activeContracts[0]._id)
+        }
+      } catch (err) {
+        console.error("Failed to load contracts", err)
+      }
+    }
+
+    fetchContracts()
   }, [])
 
-  // หาข้อมูลผู้เช่าจากห้องที่เลือก
-  const currentTenant = availableRooms.find(r => r.id === selectedRoomId) || availableRooms[0]
+  const previousWater = Number(currentRoom?.roomId?.lastMeterReading?.water || 0)
+  const waterUsedRaw = Number(waterCurrent || 0) - previousWater
+  const waterUsed = waterUsedRaw > 0 ? waterUsedRaw : 0
 
-  // --- 3. Logic Functions ---
-  const addItem = () => {
-    setItems([...items, { id: Date.now(), description: '', amount: 0 }])
+  const previousElectric = Number(currentRoom?.roomId?.lastMeterReading?.electric || 0)
+  const electricUsedRaw = Number(electricCurrent || 0) - previousElectric
+  const electricUsed = electricUsedRaw > 0 ? electricUsedRaw : 0
+
+  const grandTotal =
+    Number(rent) + Number(serviceFee) + (waterUsed * 10) + (electricUsed * 7)
+
+  const handleCreateInvoice = async () => {
+    try {
+      const payload = {
+        contractId,
+        billingPeriod,
+        meters: {
+          water: {
+            current: Number(waterCurrent || 0),
+          },
+          electric: {
+            current: Number(electricCurrent || 0),
+          },
+        },
+        amounts: {
+          rent: Number(rent),
+          serviceFee: Number(serviceFee || 0),
+        },
+      }
+
+      const res = await api.post("/invoices", payload)
+
+      console.log("Invoice created:", res.data)
+      alert("สร้างใบแจ้งหนี้สำเร็จ")
+
+      // reset meter inputs after success
+      setWaterCurrent("")
+      setElectricCurrent("")
+      setServiceFee(0)
+    } catch (error: any) {
+      console.error("Create invoice failed:", error)
+      alert("เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้")
+    }
   }
-
-  const removeItem = (id: number) => {
-    if (items.length > 1) setItems(items.filter(i => i.id !== id))
-  }
-
-  const updateItem = (id: number, field: string, value: any) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, [field]: field === 'amount' ? Number(value) : value } : item
-    ))
-  }
-
-  const totalAmount = items.reduce((sum, item) => sum + Number(item.amount || 0), 0)
 
   return (
-    // กำหนด h-screen และ flex-col เพื่อให้ส่วน main เลื่อนได้อิสระ
-    <div className="h-screen flex flex-col bg-slate-100 font-sans overflow-hidden">
-      {/* ส่วน Main ตั้งค่า overflow-auto เพื่อให้เลื่อนขึ้นลงได้ */}
-      <main className="flex-1 overflow-auto custom-scrollbar">
-        <div className="p-6 max-w-[1400px] mx-auto space-y-6 pb-12">
-          
-          {/* --- Header Section (ตามโค้ดที่คุณต้องการ) --- */}
-          <div className="bg-[#1e293b] rounded-xl p-8 text-white shadow-lg flex items-start gap-6 border border-slate-700">
-              {/* ส่วนของโลโก้/ไอคอน */}
-              <div className="bg-blue-500/20 p-4 rounded-2xl border border-blue-400/30 shadow-inner shrink-0">
-                  <div className="bg-blue-500 p-3 rounded-xl shadow-lg shadow-blue-500/50">
-                      <ReceiptText size={40} className="text-white" />
-                  </div>
-              </div>
+    <div className="min-h-screen bg-gray-50">
 
-              {/* ส่วนของข้อความ */}
-              <div className="flex-1">
-                  <h1 className="text-2xl font-bold mb-2 tracking-wide leading-tight">
-                      กรุณากรอกรายละเอียดเกี่ยวกับค่าเช่าและค่าบริการเพื่อแจ้งบิลให้แต่ละห้อง
-                  </h1>
-                  <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-                      ระบบแจ้งเตือนค่าเช่าและค่าบริการ จะส่งไปทางกล่องข้อความของแต่ละคน 
-                      เพื่อให้ลูกบ้านรับทราบและดำเนินการชำระเงินผ่านระบบของตนเองได้อย่างสะดวก
-                  </p>
-              </div>
-          </div>
-
-          {/* --- Main Content Boxes --- */}
-          <div className="flex flex-col lg:flex-row gap-6">
-            
-            {/* Box 1: ฝั่งซ้าย (ข้อมูลและรายการ) */}
-            <div className="lg:flex-[1.5] bg-white rounded-3xl shadow-sm border border-slate-200 flex flex-col h-fit">
-              <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-blue-100 p-2 rounded-lg text-blue-600 font-bold">
-                    <Home size={20} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">เลือกห้องที่จะเรียกเก็บ</label>
-                    <div className="relative">
-                      <select 
-                        value={selectedRoomId}
-                        onChange={(e) => setSelectedRoomId(e.target.value)}
-                        className="appearance-none bg-transparent font-bold text-lg text-slate-800 pr-8 outline-none cursor-pointer"
-                      >
-                        {availableRooms.map(room => (
-                          <option key={room.id} value={room.id}>ห้อง {room.id}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={16} className="absolute right-0 top-1.5 text-slate-400 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
-                <button 
-                  onClick={addItem}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-5 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 shadow-md"
-                >
-                  <Plus size={16} /> เพิ่มรายการค่าใช้จ่าย
-                </button>
-              </div>
-
-              <div className="p-6 space-y-8">
-                {/* ข้อมูลผู้เช่า */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ชื่อผู้เช่า (Tenant)</p>
-                    <p className="text-base font-bold text-slate-800 flex items-center gap-2 font-sans">
-                      <User size={16} className="text-slate-400" /> {currentTenant.name}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">อีเมล (Contact)</p>
-                    <p className="text-sm text-slate-500 font-medium italic truncate">{currentTenant.email}</p>
-                  </div>
-                </div>
-
-                {/* รายการเรียกเก็บ */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between ml-1">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-wider">รายการเรียกเก็บเงิน</p>
-                    <p className="text-[10px] text-slate-400 italic">* ข้อมูลจะปรากฏที่หน้าลูกบ้านทันที</p>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {items.map((item) => (
-                      <div key={item.id} className="flex gap-3 items-center group animate-in slide-in-from-left-2 duration-300">
-                        <input 
-                          type="text" 
-                          value={item.description || ''}
-                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                          placeholder="คำอธิบายรายการ..."
-                          className="flex-1 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-blue-500 outline-none text-sm transition-all shadow-sm"
-                        />
-                        <div className="relative w-44 shrink-0">
-                          <span className="absolute left-4 top-3.5 text-slate-400 font-bold text-xs">฿</span>
-                          <input 
-                            type="number" 
-                            value={item.amount ?? 0}
-                            onChange={(e) => updateItem(item.id, 'amount', e.target.value)}
-                            className="w-full p-3.5 pl-8 bg-slate-50 border border-slate-200 rounded-2xl text-right font-black text-blue-600 outline-none text-sm shadow-sm"
-                          />
-                        </div>
-                        <button 
-                          onClick={() => removeItem(item.id)}
-                          className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                        >
-                          <X size={20} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Box 2: ฝั่งขวา (สรุปและยืนยัน) */}
-            <div className="lg:flex-1 space-y-6 h-fit lg:sticky lg:top-0">
-              {/* Grand Total */}
-              <div className="bg-[#1e293b] rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden border border-slate-700">
-                <div className="absolute -right-6 -top-6 opacity-5 rotate-12 pointer-events-none">
-                  <ReceiptText size={160} />
-                </div>
-                <p className="text-xs font-bold text-blue-400 uppercase tracking-[0.2em] mb-3">Grand Total</p>
-                <h2 className="text-4xl xl:text-5xl font-black tracking-tighter flex items-baseline gap-2">
-                  <span className="text-2xl font-normal opacity-40">฿</span>
-                  {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </h2>
-              </div>
-
-              {/* Settings & Send Button */}
-              <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 p-8 space-y-6">
-                <div className="space-y-3">
-                  <label className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-widest">
-                    <Calendar size={16} className="text-blue-500" /> กำหนดชำระภายในวันที่
-                  </label>
-                  <input 
-                    type="date" 
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-black text-slate-700 outline-none text-center text-sm"
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-widest">
-                    <MessageSquare size={16} className="text-blue-500" /> บันทึกเพิ่มเติมถึงผู้เช่า
-                  </label>
-                  <textarea 
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="เขียนข้อความสั้นๆ ถึงผู้เช่า..."
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-blue-500/5 min-h-[100px] resize-none transition-all"
-                  />
-                </div>
-
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 xl:py-5 rounded-[1.5rem] font-black text-base shadow-xl shadow-blue-200 flex items-center justify-center gap-3 transition-all active:scale-[0.97] group">
-                  <Send size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                  ส่งใบแจ้งหนี้ไปยังลูกบ้าน
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <footer className="pt-8 flex justify-between items-center opacity-40 text-[10px] border-t border-slate-200">
-            <p className="font-bold uppercase tracking-widest">EasyProperty Admin Panel v2.0</p>
-            <p className="font-mono" suppressHydrationWarning>
-              ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}
-            </p>
-          </footer>
+      {/* ── Top Bar ── */}
+      <div className="bg-gray-900 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-yellow-400" />
+          <span className="text-white font-semibold text-sm tracking-wide">ระบบจัดการห้องเช่า</span>
         </div>
-      </main>
+        <span className="text-xs text-gray-400 bg-gray-800 px-3 py-1 rounded-full font-mono">Invoice Builder</span>
+      </div>
+
+      <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
+
+        {/* ── Page Title ── */}
+        <div>
+          <p className="text-xs font-semibold tracking-widest text-amber-600 uppercase mb-1">สร้างใบแจ้งหนี้</p>
+          <h1 className="text-3xl font-bold text-gray-900">แจ้งค่าเช่า · ค่าน้ำ · ค่าไฟ</h1>
+          <p className="text-sm text-gray-400 mt-1">กรุณากรอกข้อมูลมิเตอร์และค่าใช้จ่าย เพื่อสร้างบิลสำหรับผู้เช่า</p>
+        </div>
+
+        {/* ── Card 1: ห้องและผู้เช่า ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 pt-5 pb-3 flex items-center gap-3 border-b border-gray-100">
+            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base">🏠</div>
+            <span className="font-semibold text-gray-800 text-sm">ข้อมูลห้องและผู้เช่า</span>
+          </div>
+          <div className="p-6 space-y-5">
+
+            {/* Room select */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                เลือกห้องที่มีผู้เช่าอยู่
+              </label>
+              <select
+                value={selectedRoomId}
+                onChange={(e) => {
+                  const roomId = e.target.value
+                  setSelectedRoomId(roomId)
+                  const found = contracts.find(
+                    (c) => c.roomId._id === roomId
+                  )
+                  if (found) setContractId(found._id)
+                }}
+                className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-800 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition"
+              >
+                {contracts.map((contract) => (
+                  <option
+                    key={contract.roomId._id}
+                    value={contract.roomId._id}
+                  >
+                    ห้อง {contract.roomId.roomNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Tenant info */}
+            <div className="bg-gray-900 rounded-xl p-4 grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">ผู้เช่า</p>
+                <p className="font-semibold text-white text-sm">
+                  {currentRoom?.tenantId?.profile?.fullName || "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">อีเมล</p>
+                <p className="font-semibold text-white text-sm truncate">
+                  {currentRoom?.tenantId?.email || "—"}
+                </p>
+              </div>
+            </div>
+
+            {/* Billing Period */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                รอบเก็บเงิน (Billing Period)
+              </label>
+              <input
+                type="month"
+                value={billingPeriod}
+                onChange={(e) => setBillingPeriod(e.target.value)}
+                className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-800 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition"
+              />
+              <p className="text-xs text-gray-400 mt-1.5">ตัวอย่าง: 2026-02 (กุมภาพันธ์ 2026)</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Divider ── */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs font-semibold tracking-widest text-gray-400 uppercase">ข้อมูลมิเตอร์</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        {/* ── Card 2: มิเตอร์ ── */}
+        <div className="grid sm:grid-cols-2 gap-4">
+
+          {/* Water */}
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💧</span>
+                <span className="font-semibold text-blue-800 text-sm">ค่าน้ำ</span>
+              </div>
+              <span className="text-xs bg-blue-700 text-white px-2.5 py-0.5 rounded-full font-mono">
+                ฿10 / หน่วย
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-blue-400 mb-1.5">เลขมิเตอร์ครั้งก่อน</label>
+                <input
+                  type="number"
+                  value={currentRoom?.roomId?.lastMeterReading?.water || 0}
+                  disabled
+                  className="w-full p-3 rounded-xl border border-blue-100 bg-white text-gray-400 font-mono text-base font-semibold cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-blue-600 font-semibold mb-1.5">เลขมิเตอร์ล่าสุด</label>
+                <input
+                  type="number"
+                  value={waterCurrent}
+                  onChange={(e) => {
+                    setWaterCurrent(e.target.value)
+                  }}
+                  className="w-full p-3 rounded-xl border-2 border-blue-300 bg-white text-blue-900 font-mono text-base font-semibold focus:ring-2 focus:ring-blue-400 focus:border-blue-500 outline-none transition"
+                />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-3.5 flex justify-between items-center border border-blue-100">
+              <span className="text-sm text-gray-500">จำนวนหน่วยที่ใช้</span>
+              <span className="text-lg font-bold text-blue-700 font-mono">
+                {waterUsed > 0 ? waterUsed : 0} หน่วย
+              </span>
+            </div>
+          </div>
+
+          {/* Electric */}
+          <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">⚡</span>
+                <span className="font-semibold text-yellow-800 text-sm">ค่าไฟ</span>
+              </div>
+              <span className="text-xs bg-yellow-500 text-white px-2.5 py-0.5 rounded-full font-mono">
+                ฿7 / หน่วย
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-yellow-400 mb-1.5">เลขมิเตอร์ครั้งก่อน</label>
+                <input
+                  type="number"
+                  value={currentRoom?.roomId?.lastMeterReading?.electric || 0}
+                  disabled
+                  className="w-full p-3 rounded-xl border border-yellow-100 bg-white text-gray-400 font-mono text-base font-semibold cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-yellow-700 font-semibold mb-1.5">เลขมิเตอร์ล่าสุด</label>
+                <input
+                  type="number"
+                  value={electricCurrent}
+                  onChange={(e) => {
+                    setElectricCurrent(e.target.value)
+                  }}
+                  className="w-full p-3 rounded-xl border-2 border-yellow-300 bg-white text-yellow-900 font-mono text-base font-semibold focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 outline-none transition"
+                />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-3.5 flex justify-between items-center border border-yellow-100">
+              <span className="text-sm text-gray-500">จำนวนหน่วยที่ใช้</span>
+              <span className="text-lg font-bold text-yellow-600 font-mono">
+                {electricUsed > 0 ? electricUsed : 0} หน่วย
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Divider ── */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs font-semibold tracking-widest text-gray-400 uppercase">สรุปค่าใช้จ่าย</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        {/* ── Card 3: ค่าใช้จ่าย ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 pt-5 pb-3 flex items-center gap-3 border-b border-gray-100">
+            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base">🧾</div>
+            <span className="font-semibold text-gray-800 text-sm">รายการค่าใช้จ่าย</span>
+          </div>
+
+          <div className="px-6 pt-2 pb-6">
+            {/* ค่าเช่า */}
+            <div className="flex items-center justify-between py-3.5 border-b border-gray-50">
+              <span className="text-sm text-gray-600">🏠 ค่าเช่าห้อง</span>
+              <div className="text-right">
+                <input
+                  type="number"
+                  value={rent}
+                  disabled
+                  className="text-right w-28 font-mono font-semibold text-sm text-gray-400 bg-transparent outline-none cursor-not-allowed"
+                />
+                <span className="text-xs text-gray-300 ml-0.5">บาท</span>
+              </div>
+            </div>
+
+            {/* ค่าบริการ */}
+            <div className="flex items-center justify-between py-3.5 border-b border-gray-50">
+              <span className="text-sm text-gray-600">🔧 ค่าบริการอื่น ๆ</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  value={serviceFee}
+                  onChange={(e) => setServiceFee(Number(e.target.value))}
+                  className="text-right w-28 font-mono font-semibold text-sm text-gray-800 bg-transparent border-b-2 border-gray-200 focus:border-gray-900 outline-none transition"
+                />
+                <span className="text-xs text-gray-400">บาท</span>
+              </div>
+            </div>
+
+            {/* Grand Total */}
+            <div className="bg-gray-900 rounded-xl p-5 flex items-center justify-between mt-5">
+              <div>
+                <p className="text-xs text-gray-400">ยอดรวมทั้งหมด</p>
+                <p className="text-gray-500 text-xs mt-0.5">
+                  {billingPeriod
+                    ? new Date(billingPeriod + "-01").toLocaleDateString("th-TH", {
+                        month: "long",
+                        year: "numeric",
+                      })
+                    : "กรุณาเลือกรอบบิล"}
+                </p>
+              </div>
+              <div className="flex items-end gap-1">
+                <span className="text-sm text-yellow-500 font-mono mb-1">฿</span>
+                <span className="text-4xl font-bold text-yellow-400 font-mono tracking-tight leading-none">
+                  {grandTotal.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Submit ── */}
+        <button
+          onClick={handleCreateInvoice}
+          className="w-full bg-gray-900 hover:bg-gray-700 active:scale-[0.99] text-white py-4 rounded-2xl font-semibold text-base tracking-wide transition-all duration-150 shadow-lg shadow-gray-900/20"
+        >
+          สร้างใบแจ้งหนี้
+        </button>
+
+      </div>
     </div>
   )
 }
