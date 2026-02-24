@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
-import { UploadController } from './upload.controller';
+import { CloudinaryProvider } from '../config/cloudinary.config';
+import { UsersModule } from 'src/users/users.module';
+import { Module, forwardRef } from '@nestjs/common';
 import { UploadService } from './upload.service';
-import { CloudinaryProvider } from '../rooms/schema/config/cloudinary.config';
+import { UploadController } from './upload.controller';
 
 @Module({
+  imports: [forwardRef(() => UsersModule)],
   controllers: [UploadController],
   providers: [UploadService, CloudinaryProvider],
   exports: [UploadService],

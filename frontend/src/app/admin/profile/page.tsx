@@ -1,42 +1,35 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
-import { useAuth } from '@/context/AuthContext'
+import React, { useState, useEffect } from 'react'
+import api from '@/lib/api'
+import { getProfile } from '@/lib/auth'
 import { Upload, Save, Trash2 } from 'lucide-react'
 
-const STORAGE_KEY = 'adminProfileImage'
-
 export default function AdminProfilePage() {
-  const { user } = useAuth()
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   const [file, setFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [savedUrl, setSavedUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
-    // load saved image from localStorage
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) setSavedUrl(stored)
-    } catch (e) {}
+    async function fetchUser() {
+      try {
+        const profile = await getProfile()
+        const resolvedUser = profile?.user ? profile.user : profile
+        setUser(resolvedUser)
+      } catch (error) {
+        console.error("Failed to fetch profile:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUser()
   }, [])
 
-  useEffect(() => {
-    // create preview object URL when file changes
-    if (!file) {
-      // clear preview
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl)
-        setPreviewUrl(null)
-      }
-      return
-    }
-
-    const url = URL.createObjectURL(file)
-    setPreviewUrl(url)
-
-    return () => {
-      URL.revokeObjectURL(url)
-    }
+  const previewUrl = React.useMemo(() => {
+    if (!file) return null
+    return URL.createObjectURL(file)
   }, [file])
 
   const onSelect = (f: File | null) => {
@@ -45,40 +38,50 @@ export default function AdminProfilePage() {
 
   const handleSave = async () => {
     if (!file) return
-    // convert to base64 to persist
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = reader.result as string
-      try {
-      localStorage.setItem(STORAGE_KEY, dataUrl)
-      setSavedUrl(dataUrl)
-      // notify other listeners/tab
-      try { window.dispatchEvent(new CustomEvent('adminProfileImageUpdated', { detail: dataUrl })) } catch (e) {}
-        // clear preview and file selection
-        if (previewUrl) {
-          URL.revokeObjectURL(previewUrl)
-          setPreviewUrl(null)
-        }
-        setFile(null)
-      } catch (e) {
-        console.error('Failed to save image', e)
-      }
+
+    try {
+      setUploading(true)
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const { data } = await api.post("/upload/avatars", formData)
+
+      setUser((prev: any) => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          avatar: data.avatar,
+        },
+      }))
+
+      setFile(null)
+    } catch (err) {
+      console.error("Failed to upload avatar", err)
+    } finally {
+      setUploading(false)
     }
-    reader.readAsDataURL(file)
   }
 
-  const handleRemove = () => {
+  const handleRemove = async () => {
     try {
-      localStorage.removeItem(STORAGE_KEY)
-      try { window.dispatchEvent(new CustomEvent('adminProfileImageUpdated', { detail: null })) } catch (e) {}
-    } catch (e) {}
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl)
-      setPreviewUrl(null)
+      await api.delete("/upload/avatars")
+
+      setUser((prev: any) => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          avatar: null,
+        },
+      }))
+    } catch (err) {
+      console.error("Failed to remove avatar", err)
     }
+
     setFile(null)
-    setSavedUrl(null)
   }
+
+  if (loading) return <div className="p-6">Loading...</div>
+  if (!user) return <div className="p-6 text-red-500">ไม่พบข้อมูลผู้ดูแลระบบ</div>;
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
@@ -86,15 +89,15 @@ export default function AdminProfilePage() {
         <div className="bg-white rounded-2xl shadow-sm p-6">
           <div className="flex items-center gap-6">
             <div className="w-24 h-24 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center">
-              {savedUrl ? (
-                <img src={savedUrl} alt="profile" className="w-full h-full object-cover" />
+              {(user as any)?.profile?.avatar.url ? (
+                <img src={(user as any).profile.avatar.url} alt="profile" className="w-full h-full object-cover" />
               ) : (
                 <div className="text-gray-400">No Image</div>
               )}
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold">{user?.name ?? 'Admin'}</h2>
+              <h2 className="text-xl font-semibold">{(user as any)?.profile?.fullName ?? 'Admin'}</h2>
               <p className="text-sm text-gray-500">{user?.email ?? 'Admin@gmail.com'}</p>
             </div>
           </div>
@@ -123,8 +126,8 @@ export default function AdminProfilePage() {
               <div className="w-full h-44 bg-white rounded-md flex items-center justify-center border border-dashed">
                 {previewUrl ? (
                   <img src={previewUrl} alt="preview" className="h-full object-contain" />
-                ) : savedUrl ? (
-                  <img src={savedUrl} alt="saved" className="h-full object-contain" />
+                ) : (user as any)?.profile?.avatar.url ? (
+                  <img src={(user as any).profile.avatar.url} alt="saved" className="h-full object-contain" />
                 ) : (
                   <div className="text-sm text-gray-400">No preview available</div>
                 )}
@@ -133,7 +136,7 @@ export default function AdminProfilePage() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <button onClick={handleSave} disabled={!file} className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:shadow transition disabled:opacity-50">
+            <button onClick={handleSave} disabled={!file || uploading} className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:shadow transition disabled:opacity-50">
               <Save size={16} />
               <span>Save</span>
             </button>
