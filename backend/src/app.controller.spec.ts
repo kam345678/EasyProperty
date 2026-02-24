@@ -16,6 +16,8 @@ describe('AppController', () => {
   });
 
   it('should return greeting message', () => {
-    expect(appController.getHello()).toBe('Welcome to EasyProperty API - System is Online!');
+    expect(appController.getHello()).toBe(
+      'Welcome to EasyProperty API - System is Online!',
+    );
   });
 });
