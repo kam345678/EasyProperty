@@ -12,6 +12,7 @@ import { AppService } from './app.service';
 import { UploadModule } from './upload/upload.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
+import { InvoicesModule } from './invoices/invoices.module';
 import { ContractsModule } from './contracts/contracts.module';
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ContractsModule } from './contracts/contracts.module';
     UploadModule,
     RoomsModule,
     MaintenanceModule,
+    InvoicesModule,
     ContractsModule,
   ],
   controllers: [AppController],
