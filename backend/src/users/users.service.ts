@@ -123,6 +123,7 @@ export class UsersService {
     userId: string,
     oldPassword: string,
     newPassword: string,
+    confirmNewpassword,
   ) {
     const user = await this.userModel.findById(userId).select('+passwordHash');
 
@@ -132,6 +133,11 @@ export class UsersService {
 
     if (!matches) throw new UnauthorizedException('รหัสเดิมไม่ถูกต้อง');
 
+    if (newPassword !== confirmNewpassword) {
+      throw new BadRequestException(
+        'รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน',
+      );
+    }
     const newHash = await argon2.hash(newPassword);
 
     user.passwordHash = newHash;

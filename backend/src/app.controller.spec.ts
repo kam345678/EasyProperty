@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -14,9 +15,9 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
-    });
+  it('should return greeting message', () => {
+    expect(appController.getHello()).toBe(
+      'Welcome to EasyProperty API - System is Online!',
+    );
   });
 });

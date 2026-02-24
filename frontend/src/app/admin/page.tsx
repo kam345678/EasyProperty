@@ -4,7 +4,7 @@ import StatCard from "@/components/StatCard"
 import RoomMatrix from "@/components/RoomMatrix"
 import PaymentTable from "@/components/PaymentTable"
 import RevenueChart from "@/components/RevenueChart"
-import AdminTopNav from "@/components/AdminTopNav"
+
 
 export default function AdminDashboard() {
 
@@ -49,7 +49,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <AdminTopNav />
 
       <div className="grid grid-cols-4 gap-4">
         <StatCard title="รายได้เดือนนี้" value="120,000 บาท" borderColor="border-green-500" />

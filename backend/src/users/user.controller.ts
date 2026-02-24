@@ -14,7 +14,7 @@ import { CreateUserByAdminDto } from './dto/user.dto';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
-
+import { UpdateAvatarDto } from './dto/avatar.url.dto';
 interface JwtRequest extends Request {
   user: JwtPayload;
 }
@@ -39,15 +39,18 @@ export class UserController {
     @Req() req: JwtRequest,
     @Body('oldPassword') oldPassword: string,
     @Body('newPassword') newPassword: string,
+    @Body('confirmNewpassword') confirmNewpassword: string,
   ) {
-    // console.log('USER FROM TOKEN:', req.user);
-    // console.log('OLD PASSWORD:', oldPassword);
-    // console.log('NEW PASSWORD:', newPassword);
+    console.log('CHANGE PASSWORD HIT');
+    console.log('USER FROM TOKEN:', req.user);
+    console.log('OLD PASSWORD:', oldPassword);
+    console.log('NEW PASSWORD:', newPassword);
 
     return this.usersService.changePassword(
-      req.user.userId,
+      req.user.sub,
       oldPassword,
       newPassword,
+      confirmNewpassword,
     );
   }
 
@@ -55,15 +58,14 @@ export class UserController {
   @UseGuards(AccessTokenGuard, RolesGuard)
   @Roles('tenant', 'admin')
   @Patch('me/avatar')
-  updateMyAvatar(
-    @Req() req: JwtRequest,
-    @Body('avatarUrl') avatarUrl: string,
-    @Body('avatarPublicId') avatarPublicId: string,
-  ) {
+  updateMyAvatar(@Req() req: JwtRequest, @Body() dto: UpdateAvatarDto) {
+    console.log('BODY avatarUrl:', dto.avatarUrl);
+    console.log('BODY avatarPublicId:', dto.avatarPublicId);
+
     return this.usersService.updateAvatar(
-      req.user.userId,
-      avatarUrl,
-      avatarPublicId,
+      req.user.sub,
+      dto.avatarUrl,
+      dto.avatarPublicId,
     );
   }
 

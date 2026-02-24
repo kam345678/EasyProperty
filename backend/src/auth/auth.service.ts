@@ -113,7 +113,15 @@ export class AuthService {
 
     await this.storeRefreshHash(String(user._id), tokens.refresh_token);
 
-    return tokens;
+    return {
+      ...tokens,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        profile: user.profile ?? null,
+      },
+    };
   }
 
   async refreshTokens(
@@ -156,7 +164,7 @@ export class AuthService {
     }
 
     return {
-      userId: user._id,
+      userId: String(user._id),
       email: user.email,
       role: user.role,
       profile: user.profile, // ถ้ามี

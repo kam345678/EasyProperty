@@ -2,11 +2,13 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import api from '@/lib/api'
 
 type User = { id?: string | number; name?: string | null; email?: string | null; role?: string } | null
 
 type AuthContextType = {
   user: User
+  setUser: React.Dispatch<React.SetStateAction<User>>
   loading: boolean
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>
   logout: () => Promise<void>
@@ -19,43 +21,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // Initialize from role cookie if present
   useEffect(() => {
-    try {
-      const cookies = Object.fromEntries(document.cookie.split(';').map(c => c.split('=').map(s => s.trim())))
-      if (cookies['role'] === 'admin') {
-        setUser({ id: 'admin', name: 'Admin', email: 'Admin@gmail.com', role: 'admin' })
+    const loadUser = async () => {
+      try {
+        const { data } = await api.get('/auth/profile')
+        setUser(data?.user ? data.user : data)
+      } catch (err) {
+        setUser(null)
+      } finally {
+        setLoading(false)
       }
-    } catch (e) {}
-    setLoading(false)
+    }
+
+    loadUser()
   }, [])
 
   const login = async (email: string, password: string) => {
-    // Client-side validation per requirements
-    if (password.length < 8) return { ok: false, message: 'Password must be at least 8 characters' }
-    if (email !== 'Admin@gmail.com') return { ok: false, message: 'Authentication failed' }
-    if (password !== '12345678') return { ok: false, message: 'Authentication failed' }
-
-    const authUser = { id: 'admin', name: 'Admin', email, role: 'admin' }
-    setUser(authUser)
     try {
-      // role cookie for middleware/server checks
-      document.cookie = `role=admin; path=/; max-age=${60 * 60 * 24}`
-    } catch (e) {}
-    return { ok: true }
+      const { data } = await api.post('/auth/login', {
+        email,
+        password,
+      })
+
+      setUser(data?.user ? data.user : data)
+      return { ok: true }
+    } catch (err: any) {
+      return {
+        ok: false,
+        message:
+          err.response?.data?.message || 'Authentication failed',
+      }
+    }
   }
 
   const logout = async () => {
-    // clear role cookie
     try {
-      document.cookie = 'role=; path=/; max-age=0'
+      await api.post('/auth/logout')
     } catch (e) {}
     setUser(null)
     router.push('/login')
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
@@ -66,4 +74,3 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }
-

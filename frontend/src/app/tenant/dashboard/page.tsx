@@ -3,16 +3,21 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { LogOut, Home, FileText, Wrench, User, Hash, CreditCard, AlertTriangle } from "lucide-react";
+import { logout } from '@/lib/api'
 
 export default function TenantDashboard() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleLogout = () => {
-    if (confirm("คุณแน่ใจที่ต้องการออกจากระบบหรือไม่?")) {
-      // ลบ token หรือ session ที่จำเป็น
-      localStorage.removeItem("authToken");
-      router.push("/");
+  const handleLogout = async () => {
+    if (!confirm("คุณแน่ใจที่ต้องการออกจากระบบหรือไม่?")) return;
+
+    try {
+      await logout(); // เรียก API logout + ลบ token
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      router.push("/login");
     }
   };
   const tenant = {
