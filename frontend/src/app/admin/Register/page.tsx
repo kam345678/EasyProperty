@@ -1,7 +1,5 @@
 "use client"
-
 import { useState, useEffect } from 'react'
-import AdminTopNav from "@/components/AdminTopNav"
 import {
   UserPlus, Lock, Home, ChevronRight,
   User, Phone, ShieldCheck, UserCheck
@@ -27,16 +25,16 @@ export default function RegisterTenantPage() {
     tempPassword: string;
   } | null>(null)
 
+  // ✅ ตั้งค่าพอร์ตให้ตรงกับ Backend (NestJS ส่วนใหญ่คือ 3000)
+  const BACKEND_URL = "http://localhost:3000/api/v1";
+
   useEffect(() => {
     const fetchRooms = async () => {
       try {
         const token = localStorage.getItem('accessToken');
-        const response = await fetch('http://localhost:3000/api/v1/rooms', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        const response = await fetch(`${BACKEND_URL}/rooms`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        
         const result = await response.json();
         const data = Array.isArray(result) ? result : (result.data || result.rooms || []);
         
@@ -50,58 +48,31 @@ export default function RegisterTenantPage() {
         console.error("Error fetching rooms:", error);
       }
     };
-
     fetchRooms();
-
     const now = new Date().toISOString().split('T')[0]
     setFormData(prev => ({ ...prev, startDate: now, endDate: now }))
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-
-    // ✅ Validation: บัตรประชาชน 13 หลัก และต้องเป็นตัวเลขเท่านั้น
     if (name === "idCard") {
       const onlyNums = value.replace(/[^0-9]/g, '');
-      if (onlyNums.length <= 13) {
-        setFormData(prev => ({ ...prev, [name]: onlyNums }))
-      }
+      if (onlyNums.length <= 13) setFormData(prev => ({ ...prev, [name]: onlyNums }))
       return;
     }
-
-    // ✅ Validation: เบอร์โทรศัพท์ 10 หลัก และต้องเป็นตัวเลขเท่านั้น
     if (name === "phone") {
       const onlyNums = value.replace(/[^0-9]/g, '');
-      if (onlyNums.length <= 10) {
-        setFormData(prev => ({ ...prev, [name]: onlyNums }))
-      }
+      if (onlyNums.length <= 10) setFormData(prev => ({ ...prev, [name]: onlyNums }))
       return;
     }
-
-    // ✅ Validation: ถ้าเปลี่ยนวันเริ่มสัญญา ให้เช็ควันหมดสัญญาด้วย
-    if (name === "startDate") {
-      setFormData(prev => ({ 
-        ...prev, 
-        [name]: value,
-        // ถ้าวันหมดสัญญาที่มีอยู่ ดันมาก่อนวันเริ่มสัญญาใหม่ ให้เซ็ตวันหมดสัญญาเท่ากับวันเริ่ม
-        endDate: prev.endDate < value ? value : prev.endDate 
-      }))
-      return;
-    }
-
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Check validation final round
-    if (formData.idCard.length !== 13) {
-      alert("กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก");
-      return;
-    }
-    if (formData.phone.length !== 10) {
-      alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
+    if (formData.idCard.length !== 13 || formData.phone.length !== 10) {
+      alert("กรุณากรอกข้อมูลเลขบัตรและเบอร์โทรให้ครบถ้วน");
       return;
     }
 
@@ -114,55 +85,95 @@ export default function RegisterTenantPage() {
         return;
     }
 
-    const payload = {
-      email: formData.email,
-      role: 'tenant',
-      profile: {
-        fullName: formData.fullName,
-        phone: formData.phone,
-        idCardNumber: formData.idCard,
-        birthDate: formData.birthDate,
-        avatarUrl: null,
-        avatarPublicId: null
-      }
-    }
-
     try {
-      const response = await fetch('http://localhost:3000/api/v1/users/admin/create-user', {
+      // --- STEP 1: สร้าง USER (ยิงไปที่ UserController) ---
+      // ✅ สังเกตเส้นทาง: /users/admin/create-user (มีตัว s)
+      const userPayload = {
+        email: formData.email,
+        role: 'tenant',
+        profile: {
+          fullName: formData.fullName,
+          phone: formData.phone,
+          idCardNumber: formData.idCard,
+          birthDate: formData.birthDate,
+          avatarUrl: null,
+          avatarPublicId: null
+        }
+      }
+
+      console.log("🚀 Step 1: Creating User...");
+      const userRes = await fetch(`${BACKEND_URL}/users/admin/create-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${currentToken}`
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(userPayload),
       })
 
-      const result = await response.json()
+      const userResult = await userRes.json()
 
-      if (response.status === 401) {
-        alert("เซสชันหมดอายุ หรือคุณไม่มีสิทธิ์ Admin กรุณาเข้าสู่ระบบใหม่");
-        return;
+      if (!userRes.ok) {
+        throw new Error(userResult.message || `สร้าง User ไม่สำเร็จ (${userRes.status})`);
       }
 
-      if (response.ok) {
-        setRegistrationResult({
-          username: result.user?.email || formData.email,
-          tempPassword: result.temporaryPassword 
-        })
-        alert("ลงทะเบียนผู้เช่าสำเร็จ!")
-      } else {
-        alert(result.message || "เกิดข้อผิดพลาดในการบันทึก")
+      const newUserId = userResult.user?._id; 
+      const tempPass = userResult.temporaryPassword;
+      console.log("✅ Step 1 Success, User ID:", newUserId);
+
+      // --- STEP 2: ค้นหาห้อง เพื่อเอา _id ---
+      const selectedRoom = rooms.find(r => r.roomNumber === formData.roomNumber);
+      if (!selectedRoom) throw new Error("ไม่พบข้อมูลห้องพักที่เลือก")
+
+      // --- STEP 3: สร้าง CONTRACT ---
+      const contractPayload = {
+        roomId: selectedRoom._id,
+        tenantId: newUserId,
+        type: 'monthly',
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        status: 'active',
+        financials: {
+          deposit: Number(formData.deposit),
+          advancePayment: 0 
+        },
+        createdAt: new Date().toISOString()
       }
-    } catch (error) {
+
+      console.log("🚀 Step 2: Creating Contract...");
+      const contractRes = await fetch(`${BACKEND_URL}/contracts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentToken}`
+        },
+        body: JSON.stringify(contractPayload),
+      })
+
+      if (!contractRes.ok) {
+        const contractError = await contractRes.json()
+        throw new Error(contractError.message || "สร้างสัญญาไม่สำเร็จ");
+      }
+
+      console.log("✅ Step 2 Success!");
+
+      // --- FINISH ---
+      setRegistrationResult({
+        username: userResult.user?.email || formData.email,
+        tempPassword: tempPass 
+      })
+      alert("ลงทะเบียนผู้เช่าและจัดทำสัญญาสำเร็จ!")
+
+    } catch (error: any) {
       console.error("Submit error:", error)
-      alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้")
+      alert(error.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100 font-sans overflow-hidden">
+    <div className="h-screen flex flex-col bg-slate-100 font-sans overflow-hidden text-slate-900">
       <main className="flex-1 overflow-auto custom-scrollbar">
         <div className="p-6 max-w-[1400px] mx-auto space-y-6 pb-12">
 
@@ -233,7 +244,7 @@ export default function RegisterTenantPage() {
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase ml-1">อีเมล (Username)</label>
-                    <input type="email" name="email" value={formData.email} required onChange={handleInputChange} className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none" />
+                    <input type="email" name="email" value={formData.email} required onChange={handleInputChange} placeholder="example@email.com" className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none" />
                   </div>
                 </div>
 
@@ -245,12 +256,12 @@ export default function RegisterTenantPage() {
                     <input type="date" name="startDate" value={formData.startDate} required onChange={handleInputChange} className="w-full p-3 bg-blue-50 border-none rounded-xl text-sm font-bold text-blue-700" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-red-600">วันหมดสัญญา (ต้องหลังจากวันเริ่ม)</label>
+                    <label className="text-[10px] font-bold text-red-600">วันหมดสัญญา</label>
                     <input 
                         type="date" 
                         name="endDate" 
                         value={formData.endDate} 
-                        min={formData.startDate} // ✅ บังคับให้เลือกได้เฉพาะตั้งแต่วันเริ่มสัญญาเป็นต้นไป
+                        min={formData.startDate} 
                         required 
                         onChange={handleInputChange} 
                         className="w-full p-3 bg-red-50 border-none rounded-xl text-sm font-bold text-red-700" 
@@ -258,13 +269,13 @@ export default function RegisterTenantPage() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-green-600">เงินประกัน (฿)</label>
-                    <input type="number" name="deposit" value={formData.deposit} required onChange={handleInputChange} className="w-full p-3 bg-green-50 border-none rounded-xl text-sm font-bold text-green-700" />
+                    <input type="number" name="deposit" value={formData.deposit} required onChange={handleInputChange} placeholder="0.00" className="w-full p-3 bg-green-50 border-none rounded-xl text-sm font-bold text-green-700 outline-none" />
                   </div>
                 </div>
 
                 <div className="pt-6">
                   <button type="submit" disabled={isLoading} className={`w-full ${isLoading ? 'bg-slate-400' : 'bg-blue-600 hover:bg-blue-700'} text-white py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-2 shadow-lg`}>
-                    {isLoading ? 'กำลังบันทึก...' : 'ยืนยันการลงทะเบียน'}
+                    {isLoading ? 'กำลังบันทึกข้อมูล...' : 'ยืนยันการลงทะเบียน'}
                     {!isLoading && <ChevronRight size={20} />}
                   </button>
                 </div>
