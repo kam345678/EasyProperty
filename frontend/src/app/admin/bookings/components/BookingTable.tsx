@@ -1,60 +1,59 @@
 'use client';
 import React, { useState } from 'react';
 import StatusBadge from './StatusBadge';
+import ContractModal from './ContractModal';
+import { Eye, ChevronRight } from 'lucide-react';
 
-type Booking = {
-  id: number;
-  room: string;
-  guest: string;
-  checkIn: string;
-  checkOut: string;
-  nights: number;
-  type: string;
-  status: string;
-};
-
-export default function BookingTable({ bookings, total, pageSize }: { bookings: Booking[]; total: number; pageSize: number }) {
-  const [page, setPage] = useState(1);
+export default function BookingTable({ bookings }: { bookings: any[] }) {
+  const [selectedRoom, setSelectedRoom] = useState<any>(null);
 
   return (
-    <div>
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Room</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Guest Name</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Check-In</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Check-Out</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nights</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+    // ตัว Container ของตารางเปลี่ยนเป็นสีขาว (bg-white)
+    <div className="w-full bg-white rounded-[2.5rem] shadow-2xl shadow-black/20 overflow-hidden border border-white">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            {/* หัวตารางใช้สีเทาอ่อนเพื่อให้ดูสะอาด */}
+            <tr className="bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+              <th className="px-8 py-5 text-left">Room Unit</th>
+              <th className="px-8 py-5 text-left">Resident Name</th>
+              <th className="px-8 py-5 text-center">Status</th>
+              <th className="px-8 py-5 text-right">Action</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {bookings.map((b) => (
-              <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 text-sm text-gray-800">{b.room}</td>
-                <td className="px-6 py-4 text-sm text-gray-800">{b.guest}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{new Date(b.checkIn).toLocaleDateString()}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{new Date(b.checkOut).toLocaleDateString()}</td>
-                <td className="px-6 py-4 text-sm text-gray-800">{b.nights}</td>
-                <td className="px-6 py-4 text-sm text-gray-800">{b.type}</td>
-                <td className="px-6 py-4 text-sm"> <StatusBadge status={b.status} /> </td>
+          <tbody className="divide-y divide-slate-50">
+            {bookings.map((b: any) => (
+              <tr key={b.id} className="hover:bg-blue-50/50 transition-all duration-200 group">
+                <td className="px-8 py-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center font-black text-white group-hover:bg-blue-600 transition-all duration-300 shadow-md">
+                      {b.room}
+                    </div>
+                    <span className="font-bold text-slate-900">Monthly Unit</span>
+                  </div>
+                </td>
+                <td className="px-8 py-6">
+                  <span className={`font-bold ${b.guest === '-' ? 'text-slate-300' : 'text-slate-700'}`}>
+                    {b.guest}
+                  </span>
+                </td>
+                <td className="px-8 py-6 text-center">
+                  <StatusBadge status={b.status} />
+                </td>
+                <td className="px-8 py-6 text-right">
+                  <button 
+                    onClick={() => setSelectedRoom(b)}
+                    className="inline-flex items-center gap-2 px-5 py-2 bg-slate-100 text-blue-600 rounded-xl font-bold text-[11px] uppercase hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-95"
+                  >
+                    Details <ChevronRight size={14} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      <div className="mt-4 flex items-center justify-between">
-        <div className="text-sm text-gray-600">Showing {bookings.length}/{total}</div>
-        <div className="flex items-center space-x-2">
-          {[1, 2, 3].map((p) => (
-            <button key={p} onClick={() => setPage(p)} className={`px-3 py-1 rounded-md ${page===p ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-700'} hover:shadow`}>{p}</button>
-          ))}
-        </div>
-      </div>
+      {selectedRoom && <ContractModal data={selectedRoom} onClose={() => setSelectedRoom(null)} />}
     </div>
   );
 }
