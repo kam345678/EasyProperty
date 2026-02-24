@@ -1,66 +1,102 @@
-// src/maintenance/maintenance.service.ts
 import {
   Injectable,
-  InternalServerErrorException,
-  Logger,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import {
-  Maintenance,
-  MaintenanceDocument,
-} from './entities/maintenance.entity';
+import { Maintenance } from './entities/maintenance.entity';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class MaintenanceService {
-  // สร้าง Logger เพื่อช่วยดู Log ใน Terminal ได้ง่ายขึ้น
-  private readonly logger = new Logger(MaintenanceService.name);
-
   constructor(
     @InjectModel(Maintenance.name)
-    private maintenanceModel: Model<MaintenanceDocument>,
+    private maintenanceModel: Model<Maintenance>,
+    private cloudinaryService: UploadService,
   ) {}
 
-  async create(dto: CreateMaintenanceDto, file?: any) {
-    try {
-      // 1. Debug: เช็คว่าข้อมูล DTO และไฟล์วิ่งเข้ามาที่ Service หรือยัง
-      console.log('--- Debug Start ---');
-      console.log('Received DTO:', dto);
-      console.log('Received File:', file ? file.filename : 'No file');
+  // 1️⃣ Tenant สร้างรายการแจ้งซ่อม (หลายรูป + Cloudinary)
+  async create(dto: CreateMaintenanceDto, files?: Express.Multer.File[]) {
+    let uploadedImages: { url: string; publicId: string }[] = [];
 
-      let imageUrl = '';
-      if (file) {
-        imageUrl = `maintenance/${file.filename}`;
-      }
+    if (files && files.length > 0) {
+      const uploadResults = (await Promise.all(
+        files.map((file) =>
+          this.cloudinaryService.uploadImage(file, 'maintenance'),
+        ),
+      )) as any[];
 
-      // 2. สร้าง Instance ของ Model
-      // แยกค่าออกมาเพื่อความชัดเจน ป้องกันปัญหาเรื่องชื่อฟิลด์ใน DTO ไม่ตรงกับ Entity
-      const newRecord = new this.maintenanceModel({
-        title: dto.title,
-        description: dto.description,
-        imageUrl: imageUrl,
-        status: 'OPEN', // กำหนดค่าเริ่มต้นตามที่คุณต้องการ
-      });
-
-      console.log('Model instance created, attempting to save to MongoDB...');
-
-      // 3. บันทึกลงฐานข้อมูล
-      const savedData = await newRecord.save();
-
-      console.log('Successfully saved to DB:', savedData._id);
-      console.log('--- Debug End ---');
-
-      return savedData;
-    } catch (error) {
-      // 4. พ่น Error จริงๆ ออกมาที่ Terminal
-      this.logger.error('===== DATABASE SAVE ERROR =====');
-      this.logger.error(error.message); // บอกสาเหตุ เช่น ต่อ DB ไม่ติด หรือ Schema ผิด
-      this.logger.error(error.stack); // บอกบรรทัดที่เกิดปัญหา
-      this.logger.error('================================');
-
-      // ส่ง Error กลับไปหา Postman/Frontend ให้เห็นข้อความที่ชัดเจนขึ้น
-      throw new InternalServerErrorException(`DB Error: ${error.message}`);
+      uploadedImages = uploadResults.map((result) => ({
+        url: result.secure_url,
+        publicId: result.public_id,
+      }));
     }
+
+    const newMaintenance = new this.maintenanceModel({
+      ...dto,
+      images: uploadedImages,
+      status: 'pending',
+      priority: dto.priority || 'medium',
+      repairLogs: [
+        {
+          status: 'pending',
+          note: 'แจ้งซ่อมเข้าระบบ',
+          updatedAt: new Date(),
+        },
+      ],
+    });
+
+    return newMaintenance.save();
+  }
+
+  // 2️⃣ Admin ดูทั้งหมด
+  async findAll() {
+    return this.maintenanceModel.find().sort({ createdAt: -1 }).exec();
+  }
+
+  // 3️⃣ Admin เปลี่ยนสถานะ
+  async updateStatus(id: string, status: string) {
+    if (!['pending', 'in_progress', 'completed'].includes(status)) {
+      throw new BadRequestException('Invalid status value');
+    }
+
+    const maintenance = await this.maintenanceModel.findById(id);
+
+    if (!maintenance) {
+      throw new NotFoundException('Maintenance not found');
+    }
+
+    maintenance.status = status;
+
+    maintenance.repairLogs.push({
+      status,
+      note: `เปลี่ยนสถานะเป็น ${status}`,
+      updatedAt: new Date(),
+    });
+
+    return maintenance.save();
+  }
+
+  // 4️⃣ Admin เพิ่ม repair log
+  async addRepairLog(id: string, note: string, status: string) {
+    const maintenance = await this.maintenanceModel.findById(id);
+
+    if (!maintenance) {
+      throw new NotFoundException('Maintenance not found');
+    }
+
+    maintenance.repairLogs.push({
+      status,
+      note,
+      updatedAt: new Date(),
+    });
+
+    if (status) {
+      maintenance.status = status;
+    }
+
+    return maintenance.save();
   }
 }

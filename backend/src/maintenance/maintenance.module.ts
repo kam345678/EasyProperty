@@ -1,12 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { MulterModule } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { v4 as uuidv4 } from 'uuid';
-import { extname } from 'path';
 import { MaintenanceController } from './maintenance.controller';
 import { MaintenanceService } from './maintenance.service';
 import { Maintenance, MaintenanceSchema } from './entities/maintenance.entity';
+import { UploadModule } from 'src/upload/upload.module';
 
 @Module({
   imports: [
@@ -14,17 +11,7 @@ import { Maintenance, MaintenanceSchema } from './entities/maintenance.entity';
     MongooseModule.forFeature([
       { name: Maintenance.name, schema: MaintenanceSchema },
     ]),
-
-    // ตั้งค่า Multer สำหรับอัปโหลดรูป
-    MulterModule.register({
-      storage: diskStorage({
-        destination: './uploads/maintenance', // ต้องไปสร้างโฟลเดอร์นี้รอไว้ด้วย
-        filename: (req, file, cb) => {
-          const uniqueSuffix = uuidv4();
-          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
-        },
-      }),
-    }),
+    UploadModule,
   ],
   controllers: [MaintenanceController],
   providers: [MaintenanceService],

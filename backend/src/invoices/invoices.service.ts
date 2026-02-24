@@ -4,12 +4,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Invoice } from './schemas/invoice.schema';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { PayInvoiceDto } from './dto/pay-invoice.dto';
 import { Contract } from '../contracts/schemas/contract.schema';
-import { Room } from '../rooms/schemas/room.schema';
+import { Room } from '../rooms/schema/room.schema';
 
 @Injectable()
 export class InvoicesService {
@@ -40,9 +40,10 @@ export class InvoicesService {
         'Meter value cannot be lower than previous',
       );
     }
-
-    const waterTotal = waterUsed * room.waterPrice;
-    const electricTotal = electricUsed * room.electricPrice;
+    const WATER_PRICE = 10;
+    const ELECTRIC_PRICE = 8;
+    const waterTotal = waterUsed * WATER_PRICE;
+    const electricTotal = electricUsed * ELECTRIC_PRICE;
 
     const grandTotal =
       dto.amounts.rent + dto.amounts.serviceFee + waterTotal + electricTotal;
@@ -56,12 +57,12 @@ export class InvoicesService {
         water: {
           previous: waterPrevious,
           current: dto.meters.water.current,
-          unitPrice: room.waterPrice,
+          unitPrice: WATER_PRICE,
         },
         electric: {
           previous: electricPrevious,
           current: dto.meters.electric.current,
-          unitPrice: room.electricPrice,
+          unitPrice: ELECTRIC_PRICE,
         },
       },
       amounts: {
@@ -106,7 +107,7 @@ export class InvoicesService {
     if (!invoice) throw new NotFoundException('Invoice not found');
 
     invoice.payment.status = status;
-    invoice.payment.confirmedBy = adminId;
+    invoice.payment.confirmedBy = new Types.ObjectId(adminId);
 
     return invoice.save();
   }

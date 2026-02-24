@@ -13,6 +13,7 @@ import { UploadModule } from './upload/upload.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { InvoicesModule } from './invoices/invoices.module';
+import { ContractsModule } from './contracts/contracts.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -44,6 +45,7 @@ import { InvoicesModule } from './invoices/invoices.module';
     RoomsModule,
     MaintenanceModule,
     InvoicesModule,
+    ContractsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

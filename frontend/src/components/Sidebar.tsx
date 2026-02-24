@@ -2,15 +2,17 @@
 
 
 import Link from 'next/link'
-import { Home, Calendar, FileText, Wrench, BarChart2, Receipt, UserPlus } from 'lucide-react'
+
+import { Home, Calendar, FileText, Wrench, BarChart2, Receipt, UserPlus, CreditCard, DollarSign } from 'lucide-react'
+
 
 const items = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
-  { href: '/admin/billing', label: 'Billing', icon: Receipt },
   { href: '/admin/Invoices', label: 'Invoices', icon: FileText },
   { href: '/admin/Register', label: 'Register Tenant', icon: UserPlus},
   { href: '/admin/maintenance', label: 'Maintenance', icon: Wrench },
+  { href: '/admin/billing', label: 'Billing', icon: CreditCard },
   { href: '/admin/reports', label: 'Reports', icon: BarChart2 },
 ]
 
