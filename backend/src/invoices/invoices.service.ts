@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { Invoice } from './schemas/invoice.schema';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { PayInvoiceDto } from './dto/pay-invoice.dto';
@@ -110,7 +110,7 @@ export class InvoicesService {
     if (!invoice) throw new NotFoundException('Invoice not found');
 
     invoice.payment.status = status;
-    invoice.payment.confirmedBy = new Types.ObjectId(adminId);
+    invoice.payment.confirmedBy = adminId as any;
 
     return invoice.save();
   }

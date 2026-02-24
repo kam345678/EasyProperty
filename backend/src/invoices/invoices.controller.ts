@@ -15,8 +15,14 @@ import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { PayInvoiceDto } from './dto/pay-invoice.dto';
 import { ConfirmInvoiceDto } from './dto/confirm-invoice.dto';
 import { UploadService } from '../upload/upload.service';
+import { UseGuards } from '@nestjs/common';
+import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtPayload } from '../auth/types/jwt-payload.type';
 
 @Controller('invoices')
+@UseGuards(AccessTokenGuard, RolesGuard)
 export class InvoicesController {
   constructor(
     private readonly invoicesService: InvoicesService,
@@ -25,12 +31,14 @@ export class InvoicesController {
 
   // Admin: create monthly invoice
   @Post()
+  @Roles('admin')
   async create(@Body() createInvoiceDto: CreateInvoiceDto) {
     return this.invoicesService.create(createInvoiceDto);
   }
 
   // Tenant: upload payment slip
   @Patch(':id/pay')
+  @Roles('tenant')
   @UseInterceptors(FileInterceptor('file'))
   async pay(
     @Param('id') invoiceId: string,
@@ -54,14 +62,19 @@ export class InvoicesController {
 
   // Admin: confirm or reject payment
   @Patch(':id/confirm')
+  @Roles('admin')
   async confirm(
     @Param('id') invoiceId: string,
     @Body() dto: ConfirmInvoiceDto,
     @Req() req: any,
   ) {
-    // adminId should come from JWT in real usage
-    const adminId = req.user?.sub || 'SYSTEM_ADMIN';
-    return this.invoicesService.confirm(invoiceId, adminId, dto.status);
+    const user = req.user as JwtPayload;
+
+    if (!user?.sub) {
+      throw new Error('Admin ID missing from token');
+    }
+
+    return this.invoicesService.confirm(invoiceId, user.sub, dto.status);
   }
 
   @Get(':id')
