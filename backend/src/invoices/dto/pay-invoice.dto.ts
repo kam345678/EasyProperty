@@ -1,11 +1,14 @@
-import { IsNotEmpty, IsString, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsDateString } from 'class-validator';
 
 export class PayInvoiceDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  slipUrl: string;
+  slipUrl?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
+  @IsString()
+  slipId?: string;
+
   @IsDateString()
   paidAt: string;
 }

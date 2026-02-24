@@ -78,6 +78,8 @@ export class InvoicesService {
     // update last meter reading
     room.lastMeterReading.water = dto.meters.water.current;
     room.lastMeterReading.electric = dto.meters.electric.current;
+    room.lastMeterReading.updatedAt = new Date();
+
     await room.save();
 
     return invoice.save();
@@ -91,6 +93,7 @@ export class InvoicesService {
     invoice.payment = {
       status: 'paid_pending_review',
       slipUrl: dto.slipUrl,
+      slipId: dto.slipId,
       paidAt: new Date(dto.paidAt),
     };
 
@@ -116,6 +119,24 @@ export class InvoicesService {
     return this.invoiceModel
       .find()
       .populate('roomId tenantId contractId')
+      .exec();
+  }
+
+  async findOne(id: string) {
+    const invoice = await this.invoiceModel
+      .findById(id)
+      .populate('roomId tenantId contractId payment.confirmedBy')
+      .exec();
+
+    if (!invoice) throw new NotFoundException('Invoice not found');
+
+    return invoice;
+  }
+
+  async findByTenant(tenantId: string) {
+    return this.invoiceModel
+      .find({ tenantId })
+      .populate('roomId contractId')
       .exec();
   }
 }

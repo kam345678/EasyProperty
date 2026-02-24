@@ -6,6 +6,12 @@ export class Invoice extends Document {
   @Prop({ type: Types.ObjectId, required: true })
   contractId: Types.ObjectId; // อ้างอิงจากสัญญาเช่า
 
+  @Prop({ type: Types.ObjectId, ref: 'Room', required: true })
+  roomId: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  tenantId: Types.ObjectId;
+
   @Prop({ required: true })
   billingPeriod: string; // เช่น "2026-02"
 
@@ -54,10 +60,11 @@ export class Invoice extends Document {
     type: {
       status: {
         type: String,
-        enum: ['pending', 'paid', 'overdue'],
+        enum: ['pending', 'paid_pending_review', 'paid', 'rejected', 'overdue'],
         default: 'pending',
       },
       slipUrl: String,
+      slipId: String,
       paidAt: Date,
       confirmedBy: { type: Types.ObjectId },
     },
@@ -66,6 +73,7 @@ export class Invoice extends Document {
   payment: {
     status: string;
     slipUrl?: string;
+    slipId?: string;
     paidAt?: Date;
     confirmedBy?: Types.ObjectId;
   };
