@@ -91,7 +91,7 @@ export class ContractsService {
       $set: { status: 'available', currentTenant: null },
     });
 
-    const deleted = await this.contractModel.findByIdAndDelete(id);
+    await this.contractModel.findByIdAndDelete(id);
     return {
       message: 'Contract deleted successfully and Room is now available',
     };
