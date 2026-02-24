@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { extname } from 'path';
 import { MaintenanceController } from './maintenance.controller';
 import { MaintenanceService } from './maintenance.service';
-import { Maintenance, MaintenanceSchema } from './entities/maintenance.entity';
+import { Maintenance, MaintenanceSchema } from './dto/create-maintenance.dto';
 
 @Module({
   imports: [

@@ -1,6 +1,7 @@
 "use client"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { useState, useMemo } from "react"
 
 type Room = {
@@ -144,6 +145,8 @@ export default function BillingPage() {
         </div>
       </div>
 =======
+=======
+>>>>>>> 8954b07f7150e7490c8e3148015ed5b7723177f7
 import { useState, useEffect } from 'react'
 import AdminTopNav from "@/components/AdminTopNav"
 import { 
@@ -375,7 +378,10 @@ export default function BillingPage() {
           </footer>
         </div>
       </main>
+<<<<<<< HEAD
 >>>>>>> 6c782dfd1d5e0872116e82da51fd1982870d3a1d
+=======
+>>>>>>> 8954b07f7150e7490c8e3148015ed5b7723177f7
     </div>
   )
 }
