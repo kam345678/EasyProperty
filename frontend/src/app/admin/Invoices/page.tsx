@@ -1,44 +1,98 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { Eye, Trash2, Search } from "lucide-react"
+import { invoiceService } from "@/services/invoice.service"
 
 interface Invoice {
-  id: string
-  tenant: string
-  room: string
-  amount: number
-  period: string
-  status: "paid" | "pending"
-  date: string
+  _id: string
+  tenantId?: {
+    name?: string
+    firstName?: string
+    lastName?: string
+    email?: string
+    profile?: {
+      firstName?: string
+      lastName?: string
+      fullName?: string
+    }
+  }
+  roomId?: {
+    roomNumber?: string
+  }
+  amounts: {
+    grandTotal: number
+  }
+  billingPeriod: string
+  payment: {
+    status: "pending" | "paid_pending_review" | "paid" | "rejected" | "overdue"
+    slipUrl?: string
+  }
+  createdAt: string
 }
 
 export default function AdminInvoicesPage() {
   const [search, setSearch] = useState("")
 
-  const [invoices, setInvoices] = useState<Invoice[]>([
-    { id: "INV001", tenant: "John Doe", room: "A101", amount: 5000, status: "paid", date: "2026-02-01",period: "May- 1-30,2026" },
-    { id: "INV002", tenant: "Jane Smith", room: "B202", amount: 4500, status: "pending", date: "2026-02-05",period: "May- 1-30,2026" },
-    { id: "INV003", tenant: "Michael Tan", room: "C303", amount: 6000, status: "pending", date: "2026-02-10",period: "May- 1-30,2026" },
-  ])
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        const data = await invoiceService.getAllInvoices()
+        const invoiceData = data.data || data
+        setInvoices(invoiceData)
+        console.log("Invoices response:", invoiceData)
+        if (invoiceData?.length) {
+          console.log("First invoice tenant object:", invoiceData[0].tenantId)
+        }
+      } catch (error) {
+        console.error("Failed to fetch invoices:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchInvoices()
+  }, [])
 
   // 🔎 Filter Logic
   const filteredInvoices = useMemo(() => {
     return invoices.filter(inv =>
-      inv.id.toLowerCase().includes(search.toLowerCase()) ||
-      inv.tenant.toLowerCase().includes(search.toLowerCase()) ||
-      inv.room.toLowerCase().includes(search.toLowerCase())
+      inv._id.toLowerCase().includes(search.toLowerCase()) ||
+      inv.tenantId?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      inv.roomId?.roomNumber?.toLowerCase().includes(search.toLowerCase())
     )
   }, [search, invoices])
 
-  const total = invoices.reduce((sum, inv) => sum + inv.amount, 0)
+  const total = invoices.reduce((sum, inv) => sum + (inv.amounts?.grandTotal || 0), 0)
 
   const outstanding = invoices
-    .filter(i => i.status === "pending")
-    .reduce((sum, inv) => sum + inv.amount, 0)
+    .filter(i => i.payment?.status === "pending")
+    .reduce((sum, inv) => sum + (inv.amounts?.grandTotal || 0), 0)
 
   const handleDelete = (id: string) => {
-    setInvoices(prev => prev.filter(inv => inv.id !== id))
+    setInvoices(prev => prev.filter(inv => inv._id !== id))
+  }
+
+  const handleConfirm = async (id: string, status: "paid" | "rejected") => {
+    try {
+      await invoiceService.confirmInvoice(id, status)
+      setInvoices(prev =>
+        prev.map(inv =>
+          inv._id === id
+            ? {
+                ...inv,
+                payment: { ...inv.payment, status },
+              }
+            : inv
+        )
+      )
+    } catch (error) {
+      console.error("Failed to confirm invoice:", error)
+    }
   }
 
   return (
@@ -115,55 +169,94 @@ export default function AdminInvoicesPage() {
   </thead>
 
   <tbody>
+    {loading && (
+      <tr>
+        <td colSpan={7} className="text-center p-6 text-gray-400">
+          Loading invoices...
+        </td>
+      </tr>
+    )}
     {filteredInvoices.map(inv => (
-      <tr key={inv.id} className="border-t hover:bg-gray-50 transition">
+      <tr key={inv._id} className="border-t hover:bg-gray-50 transition">
 
         {/* Invoice */}
         <td className="p-4 font-medium text-gray-800">
-          {inv.id}
+          {inv._id}
         </td>
 
         {/* Tenant */}
         <td className="p-4">
-          {inv.tenant}
+          {inv.tenantId
+            ? inv.tenantId.profile?.fullName ||
+              `${inv.tenantId.profile?.firstName || ""} ${inv.tenantId.profile?.lastName || ""}`.trim() ||
+              inv.tenantId.name ||
+              "-"
+            : "-"}
         </td>
 
         {/* Room */}
         <td className="p-4">
-          {inv.room}
+          {inv.roomId?.roomNumber || "-"}
         </td>
 
         {/* Period */}
         <td className="p-4 text-gray-600">
-          {inv.period}
+          {inv.billingPeriod}
         </td>
 
         {/* Amount */}
         <td className="p-4 font-semibold">
-          {inv.amount.toLocaleString()} ฿
+          {(inv.amounts?.grandTotal || 0).toLocaleString()} ฿
         </td>
 
         {/* Status */}
         <td className="p-4">
           <span
             className={`px-3 py-1 rounded-full text-xs font-medium ${
-              inv.status === "paid"
+              inv.payment?.status === "paid"
                 ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
+                : inv.payment?.status === "pending"
+                ? "bg-yellow-100 text-yellow-700"
+                : inv.payment?.status === "paid_pending_review"
+                ? "bg-blue-100 text-blue-700"
+                : inv.payment?.status === "rejected"
+                ? "bg-red-100 text-red-700"
+                : "bg-gray-200 text-gray-700"
             }`}
           >
-            {inv.status}
+            {inv.payment?.status}
           </span>
         </td>
 
         {/* Action */}
         <td className="p-4 flex justify-center gap-3">
-          <button className="text-blue-600 hover:scale-110 transition">
+          <button
+            onClick={() => setSelectedInvoice(inv)}
+            className="text-blue-600 hover:scale-110 transition"
+          >
             <Eye size={18} />
           </button>
 
+          {inv.payment?.status === "paid_pending_review" && (
+            <>
+              <button
+                onClick={() => handleConfirm(inv._id, "paid")}
+                className="text-green-600 text-xs border border-green-600 px-2 py-1 rounded hover:bg-green-600 hover:text-white transition"
+              >
+                Approve
+              </button>
+
+              <button
+                onClick={() => handleConfirm(inv._id, "rejected")}
+                className="text-red-600 text-xs border border-red-600 px-2 py-1 rounded hover:bg-red-600 hover:text-white transition"
+              >
+                Reject
+              </button>
+            </>
+          )}
+
           <button
-            onClick={() => handleDelete(inv.id)}
+            onClick={() => handleDelete(inv._id)}
             className="text-red-600 hover:scale-110 transition"
           >
             <Trash2 size={18} />
@@ -173,7 +266,7 @@ export default function AdminInvoicesPage() {
       </tr>
     ))}
 
-    {filteredInvoices.length === 0 && (
+    {!loading && filteredInvoices.length === 0 && (
       <tr>
         <td colSpan={7} className="text-center p-6 text-gray-400">
           No invoices found
@@ -184,6 +277,75 @@ export default function AdminInvoicesPage() {
 </table>
         </div>
       </div>
+
+    {/* Invoice Detail Modal */}
+    {selectedInvoice && (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl relative">
+          
+          <h2 className="text-xl font-semibold mb-4">
+            Invoice Detail
+          </h2>
+
+          <div className="space-y-2 text-sm">
+            <p><strong>Invoice ID:</strong> {selectedInvoice._id}</p>
+            <p><strong>Tenant:</strong> 
+              {selectedInvoice.tenantId?.profile?.fullName ||
+               `${selectedInvoice.tenantId?.profile?.firstName || ""} ${selectedInvoice.tenantId?.profile?.lastName || ""}`.trim() ||
+               selectedInvoice.tenantId?.name ||
+               "-"}
+            </p>
+            <p><strong>Room:</strong> {selectedInvoice.roomId?.roomNumber || "-"}</p>
+            <p><strong>Period:</strong> {selectedInvoice.billingPeriod}</p>
+            <p><strong>Total:</strong> {(selectedInvoice.amounts?.grandTotal || 0).toLocaleString()} ฿</p>
+            <p><strong>Status:</strong> {selectedInvoice.payment?.status}</p>
+          </div>
+
+          {selectedInvoice.payment?.slipUrl && (
+            <div className="mt-4">
+              <p className="text-sm font-medium mb-2">Payment Slip:</p>
+              <img
+                src={selectedInvoice.payment.slipUrl}
+                alt="Slip"
+                className="rounded-lg border max-h-64 object-contain"
+              />
+            </div>
+          )}
+
+          {selectedInvoice.payment?.status === "paid_pending_review" && (
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={async () => {
+                  await handleConfirm(selectedInvoice._id, "paid")
+                  setSelectedInvoice(null)
+                }}
+                className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
+              >
+                Approve Payment
+              </button>
+
+              <button
+                onClick={async () => {
+                  await handleConfirm(selectedInvoice._id, "rejected")
+                  setSelectedInvoice(null)
+                }}
+                className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition"
+              >
+                Reject Payment
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => setSelectedInvoice(null)}
+            className="absolute top-3 right-4 text-gray-400 hover:text-gray-600"
+          >
+            ✕
+          </button>
+
+        </div>
+      </div>
+    )}
 
     </div>
   )
