@@ -37,7 +37,7 @@ export default function TenantLayout({
             {/* Left: Logo */}
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold tracking-tight text-indigo-900">
-                Portal
+                EasyApartment
               </span>
             </div>
 

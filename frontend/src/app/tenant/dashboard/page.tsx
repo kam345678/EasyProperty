@@ -4,10 +4,20 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { LogOut, Home, FileText, Wrench, User, Hash, CreditCard, AlertTriangle } from "lucide-react";
 import { logout } from '@/lib/api'
+import { useEffect, useState } from "react";
+import { getMyContract } from "@/services/contracts.service";
+import { invoiceService } from "@/services/invoice.service";
 
 export default function TenantDashboard() {
   const router = useRouter();
   const pathname = usePathname();
+
+  const [roomNumber, setRoomNumber] = useState<string>("-");
+  const [tenantName, setTenantName] = useState<string>("ผู้เช่า");
+  const [latestBill, setLatestBill] = useState<number>(0);
+  const [paymentStatus, setPaymentStatus] = useState<string>("-");
+  const [latestInvoiceId, setLatestInvoiceId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
   const handleLogout = async () => {
     if (!confirm("คุณแน่ใจที่ต้องการออกจากระบบหรือไม่?")) return;
@@ -20,12 +30,63 @@ export default function TenantDashboard() {
       router.push("/login");
     }
   };
-  const tenant = {
-    name: "สมหญิง ใจดี",
-    room: "A-203",
-    latestBill: 3500,
-    status: "ค้างชำระ",
-  };
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        const contract = await getMyContract();
+
+        if (contract?.roomId?.roomNumber) {
+          setRoomNumber(contract.roomId.roomNumber);
+        }
+
+        if (contract?.tenantId?.profile?.fullName) {
+          setTenantName(contract.tenantId.profile.fullName);
+        } else if (contract?.tenantId?.email) {
+          setTenantName(contract.tenantId.email);
+        }
+
+        const invoiceResponse = await invoiceService.getMyInvoices();
+        const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data;
+        if (invoices && Array.isArray(invoices) && invoices.length > 0) {
+          const sorted = [...invoices].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          const latest = sorted[0];
+
+          setLatestBill(latest.amounts?.grandTotal || 0);
+          setLatestInvoiceId(latest._id || "");
+
+          const rawStatus =
+            latest.payment?.status ||
+            latest.status ||
+            "";
+
+          const normalizedStatus = String(rawStatus).toLowerCase();
+
+          setPaymentStatus(
+            normalizedStatus === "paid"
+              ? "ชำระแล้ว"
+              : normalizedStatus === "paid_pending_review"
+              ? "รอตรวจสอบการชำระเงิน"
+              : normalizedStatus === "pending"
+              ? "รอชำระ"
+              : normalizedStatus === "rejected"
+              ? "การชำระเงินถูกปฏิเสธ"
+              : normalizedStatus === "overdue"
+              ? "ค้างชำระ"
+              : "-"
+          );
+        }
+      } catch (error) {
+        console.error("Dashboard fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDashboardData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100 p-4 sm:p-8 pb-24 sm:pb-8">
@@ -39,10 +100,10 @@ export default function TenantDashboard() {
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
             <div className="flex-1">
               <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-                ยินดีต้อนรับกลับมา, {tenant.name} 👋
+                ยินดีต้อนรับกลับมา, {loading ? "..." : tenantName} 👋
               </h1>
               <p className="mt-3 text-base sm:text-lg text-indigo-100">
-                นี่คือภาพรวมห้องและการเรียกเก็บเงินของคุณ
+                นี่คือภาพรวมข้อมูลการพักอาศัยและใบแจ้งหนี้ล่าสุดของคุณ
               </p>
             </div>
             <button
@@ -108,7 +169,7 @@ export default function TenantDashboard() {
               <Hash className="text-indigo-400" size={18} />
               <div>
                 <p className="text-xs font-medium text-gray-500">ห้อง</p>
-                <p className="text-base font-semibold text-gray-900">{tenant.room}</p>
+                <p className="text-base font-semibold text-gray-900">{loading ? "..." : roomNumber}</p>
               </div>
             </div>
             <div />
@@ -119,7 +180,7 @@ export default function TenantDashboard() {
               <CreditCard className="text-red-400" size={18} />
               <div>
                 <p className="text-xs font-medium text-gray-500">บิลล่าสุด</p>
-                <p className="text-base font-semibold text-red-600">{tenant.latestBill.toLocaleString()} ฿</p>
+                <p className="text-base font-semibold text-red-600">{loading ? "..." : latestBill.toLocaleString()} ฿</p>
               </div>
             </div>
             <div />
@@ -130,7 +191,7 @@ export default function TenantDashboard() {
               <AlertTriangle className="text-yellow-500" size={18} />
               <div>
                 <p className="text-xs font-medium text-gray-500">สถานะ</p>
-                <p className="mt-1 inline-flex items-center rounded-md px-3 py-1 text-sm font-semibold text-red-700 bg-red-50 border border-red-100">{tenant.status}</p>
+                <p className="mt-1 inline-flex items-center rounded-md px-3 py-1 text-sm font-semibold text-red-700 bg-red-50 border border-red-100">{loading ? "..." : paymentStatus}</p>
               </div>
             </div>
             <div />
@@ -145,7 +206,7 @@ export default function TenantDashboard() {
             <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-100 transition group-hover:scale-125"></div>
             <p className="text-sm font-medium text-gray-500">หมายเลขห้อง</p>
             <p className="mt-4 text-2xl sm:text-3xl font-bold text-gray-800">
-              {tenant.room}
+              {loading ? "..." : roomNumber}
             </p>
           </div>
 
@@ -154,7 +215,7 @@ export default function TenantDashboard() {
             <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-red-100 transition group-hover:scale-125"></div>
             <p className="text-sm font-medium text-gray-500">ใบแจ้งหนี้ล่าสุด</p>
             <p className="mt-4 text-2xl sm:text-3xl font-bold text-red-600">
-              {tenant.latestBill.toLocaleString()} THB
+              {loading ? "..." : latestBill.toLocaleString()} THB
             </p>
           </div>
 
@@ -165,12 +226,12 @@ export default function TenantDashboard() {
 
             <span
               className={`mt-5 inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold shadow ${
-                tenant.status === "ค้างชำระ"
+                paymentStatus === "ค้างชำระ"
                   ? "bg-red-100 text-red-600"
                   : "bg-green-100 text-green-600"
               }`}
             >
-              {tenant.status}
+              {loading ? "..." : paymentStatus}
             </span>
           </div>
         </div>
@@ -183,7 +244,7 @@ export default function TenantDashboard() {
 
           <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap gap-4">
             <Link
-              href="/tenant/bills/2"
+              href={latestInvoiceId ? `/tenant/bills/${latestInvoiceId}` : "#"}
               className="w-full sm:w-auto rounded-xl bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-indigo-700 text-center"
             >
               ชำระเงินตอนนี้

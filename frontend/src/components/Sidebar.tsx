@@ -8,9 +8,9 @@ import { Home, Calendar, FileText, Wrench, BarChart2, Receipt, UserPlus, CreditC
 
 const items = [
   { href: '/admin', label: 'Dashboard', icon: Home },
-  { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
+  { href: '/admin/Contracts', label: 'Contracts', icon: Calendar },
   { href: '/admin/Invoices', label: 'Invoices', icon: FileText },
-  { href: '/admin/Register', label: 'Register Tenant', icon: UserPlus},
+  { href: '/admin/Register', label: 'sign a contrac', icon: UserPlus},
   { href: '/admin/maintenance', label: 'Maintenance', icon: Wrench },
   { href: '/admin/billing', label: 'Billing', icon: CreditCard },
   { href: '/admin/reports', label: 'Reports', icon: BarChart2 },
@@ -25,7 +25,7 @@ export default function Sidebar({ pathname }: SidebarProps) {
   return (
     <aside className="w-60 bg-slate-900 text-slate-100 h-full flex flex-col p-6 shrink-0">
       <div className="mb-8">
-        <div className="text-white text-2xl font-extrabold">EasyProperty</div>
+        <div className="text-white text-2xl font-extrabold">EasyApartment</div>
         <div className="text-sm text-slate-400 mt-1">Admin</div>
       </div>
 
@@ -56,7 +56,7 @@ export default function Sidebar({ pathname }: SidebarProps) {
       </nav>
 
       <div className="mt-6 text-xs text-slate-400">
-        © 2026 EasyProperty
+        © 2026 EasyApartment
       </div>
     </aside>
   )
