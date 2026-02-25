@@ -77,14 +77,15 @@ export class InvoicesController {
     return this.invoicesService.confirm(invoiceId, user.sub, dto.status);
   }
 
+  @Roles('tenant')
+  @Get('my')
+  getMyInvoices(@Req() req) {
+    return this.invoicesService.getInvoicesByTenant(req.user.sub);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.invoicesService.findOne(id);
-  }
-
-  @Get('tenant/:tenantId')
-  async findByTenant(@Param('tenantId') tenantId: string) {
-    return this.invoicesService.findByTenant(tenantId);
   }
 
   // Admin: list all invoices

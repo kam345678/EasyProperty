@@ -139,4 +139,11 @@ export class InvoicesService {
       .populate('roomId contractId')
       .exec();
   }
+
+  async getInvoicesByTenant(tenantId: string) {
+    return this.invoiceModel
+      .find({ tenantId })
+      .populate('contractId')
+      .sort({ createdAt: -1 });
+  }
 }
