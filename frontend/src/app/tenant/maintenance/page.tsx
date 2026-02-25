@@ -2,17 +2,21 @@
 
 import { useState } from "react";
 import { Upload, X, Wrench } from "lucide-react";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 
 export default function MaintenancePage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<"urgent" | "high" | "medium">("medium");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setImage(file);
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -26,61 +30,133 @@ export default function MaintenancePage() {
     setImagePreview(null);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title || !description) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วนครับ");
       return;
     }
-    alert("ส่งคำร้องแจ้งซ่อมเรียบร้อยแล้ว");
-    setTitle("");
-    setDescription("");
-    removeImage();
+
+    try {
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("priority", priority);
+
+      if (image) {
+        formData.append("images", image);
+      }
+
+      await fetchWithAuth("/maintenance", {
+        method: "POST",
+        data: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      alert("ส่งคำร้องแจ้งซ่อมเรียบร้อยแล้ว");
+
+      setTitle("");
+      setDescription("");
+      setPriority("medium");
+      removeImage();
+    } catch (error: any) {
+      console.error("Maintenance error:", error);
+      alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const priorityStyles = {
+    urgent: "bg-red-100 text-red-600 border-red-300",
+    high: "bg-yellow-100 text-yellow-700 border-yellow-300",
+    medium: "bg-indigo-100 text-indigo-600 border-indigo-300",
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100 p-4 sm:p-8 pb-24 sm:pb-8 pt-6 sm:pt-10 flex justify-center items-start">
-      <div className="w-full max-w-2xl rounded-3xl bg-white/95 backdrop-blur-xl p-6 sm:p-8 shadow-2xl border border-white">
-        
+    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100 p-4 sm:p-8 flex justify-center items-start">
+      <div className="w-full max-w-2xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border">
         <div className="flex items-center gap-3 mb-2">
-            <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
-                <Wrench size={24} />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-800 tracking-tight">
+          <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
+            <Wrench size={24} />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-800">
             แจ้งซ่อมบำรุง
-            </h1>
+          </h1>
         </div>
-        <p className="text-sm text-gray-500 mb-8 ml-14">แจ้งปัญหาการใช้งานหรืออุปกรณ์ชำรุดภายในห้องพัก</p>
+
+        <p className="text-sm text-gray-500 mb-8 ml-14">
+          แจ้งปัญหาการใช้งานหรืออุปกรณ์ชำรุดภายในห้องพัก
+        </p>
 
         <div className="space-y-5">
+          {/* Title */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">หัวข้อปัญหา <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              หัวข้อปัญหา *
+            </label>
             <input
               type="text"
               placeholder="เช่น แอร์ไม่เย็น, ก๊อกน้ำรั่ว"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 p-4 text-base focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
+              className="w-full rounded-xl border border-gray-200 p-4"
             />
           </div>
 
+          {/* Description */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">รายละเอียด <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              รายละเอียด *
+            </label>
             <textarea
-              placeholder="อธิบายอาการเบื้องต้น หรือจุดที่เกิดปัญหา..."
+              placeholder="อธิบายอาการ..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 p-4 text-base focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all outline-none resize-none"
+              className="w-full rounded-xl border border-gray-200 p-4 resize-none"
               rows={4}
             />
           </div>
 
+          {/* 🔥 Priority Selector */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">แนบรูปภาพประกอบ <span className="text-gray-400 font-normal">(ถ้ามี)</span></label>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              ระดับความสำคัญ
+            </label>
+
+            <div className="flex gap-3">
+              {(["high", "medium", "low"] as const).map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setPriority(level)}
+                  className={`px-4 py-2 rounded-xl border font-semibold transition-all ${
+                    priority === level
+                      ? priorityStyles[level]
+                      : "bg-gray-50 border-gray-200 text-gray-500"
+                  }`}
+                >
+                  {level.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              แนบรูปภาพ (ถ้ามี)
+            </label>
+
             {!imagePreview ? (
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-indigo-200 bg-indigo-50/50 rounded-2xl p-8 cursor-pointer hover:bg-indigo-50 hover:border-indigo-400 transition-all">
+              <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 cursor-pointer">
                 <Upload className="mb-3 text-indigo-400" size={32} />
-                <p className="text-sm font-bold text-indigo-900">แตะเพื่อเลือกรูปภาพ</p>
-                <p className="text-xs text-gray-500 mt-1">รองรับ JPG, PNG</p>
+                <p className="text-sm font-bold text-indigo-900">
+                  เลือกรูปภาพ
+                </p>
                 <input
                   type="file"
                   accept="image/*"
@@ -89,11 +165,15 @@ export default function MaintenancePage() {
                 />
               </label>
             ) : (
-              <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-                <img src={imagePreview} alt="Preview" className="w-full h-48 sm:h-64 object-cover" />
+              <div className="relative rounded-2xl overflow-hidden">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-48 object-cover"
+                />
                 <button
                   onClick={removeImage}
-                  className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-transform active:scale-90"
+                  className="absolute top-3 right-3 bg-red-500 text-white p-2 rounded-full"
                 >
                   <X size={18} />
                 </button>
@@ -104,9 +184,10 @@ export default function MaintenancePage() {
 
         <button
           onClick={handleSubmit}
-          className="w-full mt-8 rounded-2xl bg-indigo-600 p-4 text-white font-bold text-base hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 transition-all active:scale-95"
+          disabled={loading}
+          className="w-full mt-8 rounded-2xl bg-indigo-600 p-4 text-white font-bold disabled:opacity-60"
         >
-          ส่งเรื่องแจ้งซ่อม
+          {loading ? "กำลังส่ง..." : "ส่งเรื่องแจ้งซ่อม"}
         </button>
       </div>
     </div>

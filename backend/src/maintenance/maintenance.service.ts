@@ -8,34 +8,52 @@ import { Model } from 'mongoose';
 import { Maintenance } from './entities/maintenance.entity';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { UploadService } from '../upload/upload.service';
+import { RoomsService } from '../rooms/rooms.service';
+import { RoomStatus } from '../rooms/schema/room.schema';
 
 @Injectable()
 export class MaintenanceService {
   constructor(
     @InjectModel(Maintenance.name)
-    private maintenanceModel: Model<Maintenance>,
+    private maintenanceModel: Model<any>,
     private cloudinaryService: UploadService,
+    private readonly roomsService: RoomsService,
   ) {}
 
-  // 1️⃣ Tenant สร้างรายการแจ้งซ่อม (หลายรูป + Cloudinary)
-  async create(dto: CreateMaintenanceDto, files?: Express.Multer.File[]) {
+  // =========================
+  // CREATE
+  // =========================
+  async create(
+    dto: CreateMaintenanceDto,
+    userId: string,
+    files?: Express.Multer.File[],
+  ) {
+    const room = await this.roomsService.findByTenant(userId);
+
+    if (!room) {
+      throw new BadRequestException('User has no assigned room');
+    }
+
     let uploadedImages: { url: string; publicId: string }[] = [];
 
     if (files && files.length > 0) {
-      const uploadResults = (await Promise.all(
+      const uploadResults = await Promise.all(
         files.map((file) =>
           this.cloudinaryService.uploadImage(file, 'maintenance'),
         ),
-      )) as any[];
+      );
 
-      uploadedImages = uploadResults.map((result) => ({
+      uploadedImages = uploadResults.map((result: any) => ({
         url: result.secure_url,
         publicId: result.public_id,
       }));
     }
 
     const newMaintenance = new this.maintenanceModel({
-      ...dto,
+      roomId: room._id,
+      reportedBy: userId,
+      title: dto.title,
+      description: dto.description,
       images: uploadedImages,
       status: 'pending',
       priority: dto.priority || 'medium',
@@ -48,15 +66,31 @@ export class MaintenanceService {
       ],
     });
 
-    return newMaintenance.save();
+    const savedMaintenance = await newMaintenance.save();
+
+    await this.roomsService.updateStatus(
+      room._id.toString(),
+      RoomStatus.MAINTENANCE,
+    );
+
+    return savedMaintenance;
   }
 
-  // 2️⃣ Admin ดูทั้งหมด
+  // =========================
+  // FIND ALL (Admin)
+  // =========================
   async findAll() {
-    return this.maintenanceModel.find().sort({ createdAt: -1 }).exec();
+    return this.maintenanceModel
+      .find()
+      .populate('reportedBy', 'email profile')
+      .populate('roomId', 'roomNumber floor')
+      .sort({ createdAt: -1 })
+      .exec();
   }
 
-  // 3️⃣ Admin เปลี่ยนสถานะ
+  // =========================
+  // UPDATE STATUS
+  // =========================
   async updateStatus(id: string, status: string) {
     if (!['pending', 'in_progress', 'completed'].includes(status)) {
       throw new BadRequestException('Invalid status value');
@@ -70,17 +104,32 @@ export class MaintenanceService {
 
     maintenance.status = status;
 
+    if (status === 'completed') {
+      maintenance.completedAt = new Date();
+    }
+
     maintenance.repairLogs.push({
       status,
       note: `เปลี่ยนสถานะเป็น ${status}`,
       updatedAt: new Date(),
     });
 
-    return maintenance.save();
+    const updatedMaintenance = await maintenance.save();
+
+    if (status === 'completed') {
+      await this.roomsService.updateStatus(
+        maintenance.roomId.toString(),
+        RoomStatus.AVAILABLE,
+      );
+    }
+
+    return updatedMaintenance;
   }
 
-  // 4️⃣ Admin เพิ่ม repair log
-  async addRepairLog(id: string, note: string, status: string) {
+  // =========================
+  // ADD REPAIR LOG
+  // =========================
+  async addRepairLog(id: string, note: string, status?: string) {
     const maintenance = await this.maintenanceModel.findById(id);
 
     if (!maintenance) {
@@ -88,15 +137,58 @@ export class MaintenanceService {
     }
 
     maintenance.repairLogs.push({
-      status,
+      status: status || maintenance.status,
       note,
       updatedAt: new Date(),
     });
 
     if (status) {
       maintenance.status = status;
+
+      if (status === 'completed') {
+        maintenance.completedAt = new Date();
+      }
     }
 
-    return maintenance.save();
+    const updatedMaintenance = await maintenance.save();
+
+    if (status === 'completed') {
+      await this.roomsService.updateStatus(
+        maintenance.roomId.toString(),
+        RoomStatus.AVAILABLE,
+      );
+    }
+
+    return updatedMaintenance;
+  }
+
+  // =========================
+  // DELETE (Admin Only)
+  // =========================
+  async delete(id: string) {
+    const maintenance = await this.maintenanceModel.findById(id);
+
+    if (!maintenance) {
+      throw new NotFoundException('Maintenance not found');
+    }
+
+    // ✅ ลบรูปใน Cloudinary
+    if (maintenance.images && maintenance.images.length > 0) {
+      await Promise.all(
+        maintenance.images.map((img: any) =>
+          this.cloudinaryService.deleteImage(img.publicId),
+        ),
+      );
+    }
+
+    // ✅ อัปเดตสถานะห้องกลับ AVAILABLE
+    await this.roomsService.updateStatus(
+      maintenance.roomId.toString(),
+      RoomStatus.AVAILABLE,
+    );
+
+    await this.maintenanceModel.findByIdAndDelete(id);
+
+    return { message: 'Maintenance deleted successfully' };
   }
 }

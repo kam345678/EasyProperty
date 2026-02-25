@@ -69,4 +69,9 @@ export class RoomsService {
 
     return room;
   }
+
+  // 🔥 เพิ่มตรงนี้
+  async findByTenant(userId: string): Promise<RoomDocument | null> {
+  return this.roomModel.findOne({ currentTenant: userId }).exec();
+  }
 }

@@ -5,8 +5,15 @@ import { Room } from 'src/rooms/schema/room.schema';
 
 export type MaintenanceDocument = HydratedDocument<Maintenance>;
 
+export enum MaintenanceStatus {
+  PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+}
+
 @Schema({ timestamps: true })
 export class Maintenance {
+  // 👤 ผู้แจ้งซ่อม (tenant)
   @Prop({
     type: Types.ObjectId,
     ref: User.name,
@@ -14,6 +21,7 @@ export class Maintenance {
   })
   reportedBy: Types.ObjectId;
 
+  // 🚪 ห้องที่แจ้ง
   @Prop({
     type: Types.ObjectId,
     ref: Room.name,
@@ -21,6 +29,7 @@ export class Maintenance {
   })
   roomId: Types.ObjectId;
 
+  // 👷 ผู้รับงาน (admin) — optional
   @Prop({
     type: Types.ObjectId,
     ref: User.name,
@@ -28,59 +37,51 @@ export class Maintenance {
   })
   assignedTo?: Types.ObjectId;
 
-  @Prop({ required: true })
+  @Prop({ required: true, trim: true })
   title: string;
 
   @Prop({ required: true })
   description: string;
 
   @Prop({
-    type: [
-      {
-        url: { type: String, required: true },
-        publicId: { type: String, required: true },
-      },
-    ],
-    default: [],
-  })
-  images: {
-    url: string;
-    publicId: string;
-  }[];
-
-  @Prop({
-    type: String,
-    enum: ['low', 'medium', 'high'],
+    enum: ['low', 'medium', 'high', 'urgent'],
     default: 'medium',
   })
   priority: string;
 
   @Prop({
-    type: String,
-    enum: ['pending', 'in_progress', 'completed'],
-    default: 'pending',
+    enum: MaintenanceStatus,
+    default: MaintenanceStatus.PENDING,
   })
-  status: string;
+  status: MaintenanceStatus;
 
-  @Prop({
-    type: [
-      {
-        status: {
-          type: String,
-          enum: ['pending', 'in_progress', 'completed'],
-          required: true,
-        },
-        note: { type: String, required: true },
-        updatedAt: { type: Date, required: true },
-      },
-    ],
-    default: [],
-  })
-  repairLogs: {
+  @Prop([
+    {
+      url: String,
+      publicId: String,
+    },
+  ])
+  images?: { url: string; publicId: string }[];
+
+  @Prop([
+    {
+      status: String,
+      note: String,
+      updatedAt: Date,
+    },
+  ])
+  repairLogs?: {
     status: string;
     note: string;
     updatedAt: Date;
   }[];
+
+  //(Mongo จะลบเองหลัง 395 วัน)
+  @Prop({
+    type: Date,
+    expires: 60 * 60 * 24 * 395, // 395 วัน ≈ 13 เดือน
+  })
+  completedAt?: Date;
 }
 
 export const MaintenanceSchema =
