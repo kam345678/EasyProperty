@@ -64,10 +64,7 @@ export class MaintenanceController {
   @UseGuards(AccessTokenGuard, RolesGuard)
   @Roles('admin')
   @Patch(':id/status')
-  async updateStatus(
-    @Param('id') id: string,
-    @Body('status') status: string,
-  ) {
+  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.maintenanceService.updateStatus(id, status);
   }
 

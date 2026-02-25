@@ -146,4 +146,13 @@ export class InvoicesService {
       .populate('contractId')
       .sort({ createdAt: -1 });
   }
+
+  async remove(invoiceId: string) {
+    const invoice = await this.invoiceModel.findById(invoiceId);
+    if (!invoice) throw new NotFoundException('Invoice not found');
+
+    await this.invoiceModel.findByIdAndDelete(invoiceId);
+
+    return { message: 'Invoice deleted successfully' };
+  }
 }

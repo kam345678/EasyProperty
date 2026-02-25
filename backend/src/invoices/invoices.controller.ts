@@ -93,4 +93,11 @@ export class InvoicesController {
   async findAll() {
     return this.invoicesService.findAll();
   }
+
+  // Admin: delete invoice
+  @Patch(':id/delete')
+  @Roles('admin')
+  async remove(@Param('id') invoiceId: string) {
+    return this.invoicesService.remove(invoiceId);
+  }
 }

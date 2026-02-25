@@ -83,5 +83,4 @@ export class Maintenance {
   }[];
 }
 
-export const MaintenanceSchema =
-  SchemaFactory.createForClass(Maintenance);
+export const MaintenanceSchema = SchemaFactory.createForClass(Maintenance);

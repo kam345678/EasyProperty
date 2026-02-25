@@ -142,7 +142,7 @@ export default function ContractDetailPage() {
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.push("/admin/contracts")}
+              onClick={() => router.push("/admin/Contracts")}
               className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
             >
               <ArrowLeft size={18} />

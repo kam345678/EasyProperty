@@ -73,8 +73,21 @@ export default function AdminInvoicesPage() {
     .filter(i => i.payment?.status === "pending")
     .reduce((sum, inv) => sum + (inv.amounts?.grandTotal || 0), 0)
 
-  const handleDelete = (id: string) => {
-    setInvoices(prev => prev.filter(inv => inv._id !== id))
+  const handleDelete = async (id: string) => {
+    const confirmDelete = window.confirm("คุณต้องการลบบิลนี้ใช่หรือไม่?")
+    if (!confirmDelete) return
+
+    try {
+      await invoiceService.deleteInvoice(id)
+
+      setInvoices(prev => prev.filter(inv => inv._id !== id))
+    } catch (error: any) {
+      console.error("Failed to delete invoice:", error)
+      alert(
+        error?.response?.data?.message ||
+        "ไม่สามารถลบบิลได้ กรุณาลองใหม่อีกครั้ง"
+      )
+    }
   }
 
   const handleConfirm = async (id: string, status: "paid" | "rejected") => {
