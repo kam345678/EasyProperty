@@ -25,7 +25,7 @@ export default function RegisterTenantPage() {
     tempPassword: string;
   } | null>(null)
 
-  // ✅ ตั้งค่าพอร์ตให้ตรงกับ Backend (NestJS ส่วนใหญ่คือ 3000)
+  // ✅ ตั้งค่าพอร์ตให้ตรงกับ Backend
   const BACKEND_URL = "http://localhost:3000/api/v1";
 
   useEffect(() => {
@@ -36,6 +36,8 @@ export default function RegisterTenantPage() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const result = await response.json();
+        
+        // ดักจับข้อมูลจากหลายรูปแบบ
         const data = Array.isArray(result) ? result : (result.data || result.rooms || []);
         
         if (data.length > 0) {
@@ -86,8 +88,7 @@ export default function RegisterTenantPage() {
     }
 
     try {
-      // --- STEP 1: สร้าง USER (ยิงไปที่ UserController) ---
-      // ✅ สังเกตเส้นทาง: /users/admin/create-user (มีตัว s)
+      // --- STEP 1: สร้าง USER ---
       const userPayload = {
         email: formData.email,
         role: 'tenant',
@@ -101,7 +102,6 @@ export default function RegisterTenantPage() {
         }
       }
 
-      console.log("🚀 Step 1: Creating User...");
       const userRes = await fetch(`${BACKEND_URL}/users/admin/create-user`, {
         method: 'POST',
         headers: {
@@ -112,16 +112,12 @@ export default function RegisterTenantPage() {
       })
 
       const userResult = await userRes.json()
-
-      if (!userRes.ok) {
-        throw new Error(userResult.message || `สร้าง User ไม่สำเร็จ (${userRes.status})`);
-      }
+      if (!userRes.ok) throw new Error(userResult.message || "สร้าง User ไม่สำเร็จ");
 
       const newUserId = userResult.user?._id; 
       const tempPass = userResult.temporaryPassword;
-      console.log("✅ Step 1 Success, User ID:", newUserId);
 
-      // --- STEP 2: ค้นหาห้อง เพื่อเอา _id ---
+      // --- STEP 2: ค้นหาห้อง ---
       const selectedRoom = rooms.find(r => r.roomNumber === formData.roomNumber);
       if (!selectedRoom) throw new Error("ไม่พบข้อมูลห้องพักที่เลือก")
 
@@ -140,7 +136,6 @@ export default function RegisterTenantPage() {
         createdAt: new Date().toISOString()
       }
 
-      console.log("🚀 Step 2: Creating Contract...");
       const contractRes = await fetch(`${BACKEND_URL}/contracts`, {
         method: 'POST',
         headers: {
@@ -150,23 +145,16 @@ export default function RegisterTenantPage() {
         body: JSON.stringify(contractPayload),
       })
 
-      if (!contractRes.ok) {
-        const contractError = await contractRes.json()
-        throw new Error(contractError.message || "สร้างสัญญาไม่สำเร็จ");
-      }
+      if (!contractRes.ok) throw new Error("สร้างสัญญาไม่สำเร็จ");
 
-      console.log("✅ Step 2 Success!");
-
-      // --- FINISH ---
       setRegistrationResult({
         username: userResult.user?.email || formData.email,
         tempPassword: tempPass 
       })
-      alert("ลงทะเบียนผู้เช่าและจัดทำสัญญาสำเร็จ!")
+      alert("ลงทะเบียนผู้เช่าสำเร็จ!")
 
     } catch (error: any) {
-      console.error("Submit error:", error)
-      alert(error.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล")
+      alert(error.message || "เกิดข้อผิดพลาด")
     } finally {
       setIsLoading(false)
     }
@@ -176,7 +164,7 @@ export default function RegisterTenantPage() {
     <div className="h-screen flex flex-col bg-slate-100 font-sans overflow-hidden text-slate-900">
       <main className="flex-1 overflow-auto custom-scrollbar">
         <div className="p-6 max-w-[1400px] mx-auto space-y-6 pb-12">
-
+          
           <div className="bg-[#1e293b] rounded-xl p-8 text-white shadow-lg flex items-start gap-6 border border-slate-700">
             <div className="bg-blue-500 p-3 rounded-xl shadow-lg">
               <UserPlus size={40} className="text-white" />
@@ -188,7 +176,6 @@ export default function RegisterTenantPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row items-stretch gap-0 bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden font-sans">
-
             <div className="lg:flex-[1.5] flex flex-col border-r border-slate-200 bg-white">
               <div className="p-6 border-b border-slate-300 bg-slate-50/50 flex items-center gap-2 font-black text-slate-800 uppercase text-sm">
                 <UserCheck size={20} className="text-blue-600" />
@@ -197,7 +184,6 @@ export default function RegisterTenantPage() {
 
               <div className="p-8 space-y-6 flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm font-medium">
-                  
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase ml-1">หมายเลขห้องพัก (ว่าง)</label>
                     <div className="relative">
@@ -212,7 +198,9 @@ export default function RegisterTenantPage() {
                         <option value="">-- เลือกห้องพัก --</option>
                         {rooms.map((room) => (
                           <option key={room._id} value={room.roomNumber}>
-                            ห้อง {room.roomNumber} - {room.roomType.toUpperCase()} (฿{room.prices.toLocaleString()})
+                            {/* ✅ แก้ไขจุดนี้: ป้องกัน Error toLocaleString */}
+                            ห้อง {room.roomNumber} - {room.roomType?.toUpperCase() || 'STANDARD'} 
+                            (฿{(room.monthlyPrice || room.prices)?.toLocaleString() || "0"})
                           </option>
                         ))}
                       </select>
@@ -238,7 +226,7 @@ export default function RegisterTenantPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1 italic">วันเกิด (สำหรับสร้างรหัสผ่าน)</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase ml-1 italic">วันเกิด</label>
                     <input type="date" name="birthDate" value={formData.birthDate} required onChange={handleInputChange} className="w-full p-3 bg-slate-50 border rounded-xl outline-none" />
                   </div>
 
@@ -257,15 +245,7 @@ export default function RegisterTenantPage() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-red-600">วันหมดสัญญา</label>
-                    <input 
-                        type="date" 
-                        name="endDate" 
-                        value={formData.endDate} 
-                        min={formData.startDate} 
-                        required 
-                        onChange={handleInputChange} 
-                        className="w-full p-3 bg-red-50 border-none rounded-xl text-sm font-bold text-red-700" 
-                    />
+                    <input type="date" name="endDate" value={formData.endDate} min={formData.startDate} required onChange={handleInputChange} className="w-full p-3 bg-red-50 border-none rounded-xl text-sm font-bold text-red-700" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-green-600">เงินประกัน (฿)</label>
@@ -297,10 +277,6 @@ export default function RegisterTenantPage() {
                     <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Temporary Password</p>
                     <p className="text-2xl font-bold text-blue-600 tracking-wider font-mono">{registrationResult?.tempPassword || '********'}</p>
                   </div>
-                </div>
-                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 text-xs text-slate-500 leading-relaxed">
-                  <ShieldCheck size={16} className="inline mr-2 text-blue-600" />
-                  โปรดแจ้งรหัสผ่านนี้ให้ผู้เช่าทราบเพื่อเข้าสู่ระบบครั้งแรก
                 </div>
               </div>
             </div>
