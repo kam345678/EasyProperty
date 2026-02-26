@@ -1,13 +1,6 @@
+// backend/src/rooms/schema/room.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
-
-export type RoomDocument = HydratedDocument<Room>;
-
-export enum RoomType {
-  STANDARD = 'standard',
-  DELUXE = 'deluxe',
-  SUITE = 'suite',
-}
+import { Document, Types } from 'mongoose';
 
 export enum RoomStatus {
   AVAILABLE = 'available',
@@ -16,43 +9,39 @@ export enum RoomStatus {
   MAINTENANCE = 'maintenance',
 }
 
-@Schema({ _id: false })
-export class LastMeterReading {
-  @Prop({ required: true, min: 0, default: 0 })
-  water: number;
-
-  @Prop({ required: true, min: 0, default: 0 })
-  electric: number;
-
-  @Prop({ default: Date.now })
-  updatedAt: Date;
-}
+export type RoomDocument = Room & Document;
 
 @Schema({ timestamps: true })
 export class Room {
   @Prop({ required: true, unique: true })
   roomNumber: string;
 
-  @Prop({ required: true, min: 1 })
+  @Prop({ required: true })
   floor: number;
 
-  @Prop({ required: true, enum: RoomType })
-  roomType: RoomType;
-
-  @Prop({ required: true, min: 0 })
-  prices: number;
-
-  @Prop({ required: true, enum: RoomStatus, default: RoomStatus.AVAILABLE })
+  @Prop({ type: String, enum: Object.values(RoomStatus), default: RoomStatus.AVAILABLE })
   status: RoomStatus;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
-  currentTenant: Types.ObjectId | null;
+  @Prop()
+  roomType: string;
 
-  @Prop({ type: [String], default: [] })
+  // ✅ เปลี่ยนเป็น amenities ตามข้อมูลใน DB ของคุณ
+  @Prop([String])
   amenities: string[];
 
-  @Prop({ type: LastMeterReading, default: {} })
-  lastMeterReading: LastMeterReading;
+  // ✅ เปลี่ยนเป็น prices ตามข้อมูลใน DB ของคุณ
+  @Prop({ default: 0 })
+  prices: number;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  currentTenant: Types.ObjectId;
+
+  // ✅ เพิ่มฟิลด์มิเตอร์ตามโครงสร้างใน MongoDB
+  @Prop({ type: Object })
+  lastMeterReading: {
+    water: number;
+    electric: number;
+  };
 }
 
 export const RoomSchema = SchemaFactory.createForClass(Room);

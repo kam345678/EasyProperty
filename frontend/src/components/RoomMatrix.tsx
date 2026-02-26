@@ -1,105 +1,31 @@
-"use client"
-
-import { useState } from "react"
-import Modal from "./Modal"
-
-type Room = {
-  id: string
-  roomNumber: string
-  status: string
-}
-
-type Floor = {
-  floor: number
-  rooms: Room[]
-}
-
-const statusColor: Record<string, string> = {
-  available: "bg-green-500",
-  occupied: "bg-red-500",
-  booked: "bg-blue-500",
-  cleaning: "bg-yellow-400",
-}
-
-export default function RoomMatrix({ floors }: { floors: Floor[] }) {
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
-
-  const updateStatus = async (status: string) => {
-    if (!selectedRoom) return   // ✅ กัน null crash
-
-    await fetch(`http://localhost:3000/rooms/${selectedRoom.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    })
-
-    setSelectedRoom(null)
-  }
-
+// components/RoomMatrix.tsx
+export default function RoomMatrix({ floors, onRoomClick }: { floors: any[], onRoomClick: (room: any) => void }) {
   return (
-    <>
-      <div className="bg-white p-4 sm:p-6 rounded-xl shadow board max-w-full">
-        <h2 className="text-xl font-bold mb-4">Room Status</h2>
-
-       {/* ภายใน floors.map */}
-{floors.map((floor) => (
-  <div key={floor.floor} className="mb-8"> {/* เพิ่ม margin-bottom ระหว่างชั้นเล็กน้อย */}
-    
-    {/* แก้ไขตรงนี้: เพิ่มเส้นขอบด้านล่างให้ชื่อชั้น */}
-    <h3 className="font-bold text-sm text-slate-500 uppercase tracking-wider">
-      {floor.floor}th Floor
-    </h3>
-
-    <div className="flex gap-2 flex-wrap border-b-3 border-slate-200 pb-4 overflow-x-auto">
-      {floor.rooms.map((room) => (
-        <div
-          key={room.id}
-          onClick={() => setSelectedRoom(room)}
-          className={`cursor-pointer w-10 h-8 sm:w-14 sm:h-10 min-w-[40px] rounded-lg shadow-sm text-white flex items-center justify-center text-xs sm:text-xs font-bold transition-transform hover:scale-105 active:scale-95 ${statusColor[room.status]}`}
-        >
-          {room.roomNumber}
+    <div className="space-y-10 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+      {floors.map((floor) => (
+        <div key={floor.floor} className="relative">
+          <div className="absolute -left-4 top-0 bottom-0 w-1 bg-slate-100 rounded-full"></div>
+          <h4 className="font-black mb-6 text-slate-400 uppercase italic tracking-tighter text-sm">
+            Floor {floor.floor}
+          </h4>
+          <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+            {floor.rooms.map((room: any) => (
+              <button
+                key={room._id}
+                onClick={() => onRoomClick(room)}
+                className={`group relative h-16 rounded-2xl font-black text-lg transition-all active:scale-90 shadow-md flex items-center justify-center overflow-hidden ${
+                  room.status === 'available' ? 'bg-emerald-500 text-white hover:bg-emerald-600' :
+                  room.status === 'occupied' ? 'bg-rose-500 text-white hover:bg-rose-600' : 
+                  'bg-amber-500 text-white hover:bg-amber-600'
+                }`}
+              >
+                <span className="relative z-10">{room.roomNumber}</span>
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              </button>
+            ))}
+          </div>
         </div>
       ))}
     </div>
-  </div>
-))}
-      </div>
-
-      <Modal
-        isOpen={!!selectedRoom}
-        onClose={() => setSelectedRoom(null)}
-      >
-        {selectedRoom && (
-          <>
-            <h2 className="text-xl font-bold mb-4">
-              ห้อง {selectedRoom.roomNumber}
-            </h2>
-
-            <div className="space-y-2">
-              <button
-                onClick={() => updateStatus("available")}
-                className="w-full bg-green-500 text-white p-2 rounded"
-              >
-                ว่าง
-              </button>
-
-              <button
-                onClick={() => updateStatus("occupied")}
-                className="w-full bg-red-500 text-white p-2 rounded"
-              >
-                มีคนอยู่
-              </button>
-
-              <button
-                onClick={() => updateStatus("cleaning")}
-                className="w-full bg-yellow-400 text-white p-2 rounded"
-              >
-                รอทำความสะอาด
-              </button>
-            </div>
-          </>
-        )}
-      </Modal>
-    </>
-  )
+  );
 }

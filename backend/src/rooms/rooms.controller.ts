@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Param,
-  Body,
-  Query,
-  Patch,
-  ParseEnumPipe,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Query, Patch, ParseEnumPipe, UseGuards, BadRequestException } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { RoomStatus } from './schema/room.schema';
@@ -20,7 +10,6 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
-  // ✅ สร้างห้อง
   @UseGuards(AccessTokenGuard, RolesGuard)
   @Roles('admin')
   @Post()
@@ -28,19 +17,33 @@ export class RoomsController {
     return this.roomsService.create(createRoomDto);
   }
 
-  // ✅ ดูห้องทั้งหมด (filter ตาม status ได้ + pagination)
   @Get()
   findAll(@Query('status') status?: RoomStatus) {
     return this.roomsService.findAll(status);
   }
 
-  // ✅ ดูห้องตาม ID
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.roomsService.findOne(id);
   }
 
-  // ✅ อัปเดตสถานะห้อง (เช่น available / occupied / cleaning / maintenance)
+  // ✅ แก้ไขตรงนี้: รับเป็น Object เพื่อแก้ Error 400
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles('admin')
+  @Patch(':id/amenities')
+  async updateAmenities(
+    @Param('id') id: string,
+    @Body() body: { amenities: string[] }, 
+  ) {
+    console.log(`[Backend Log] ID: ${id}, Data:`, body);
+
+    if (!body || !Array.isArray(body.amenities)) {
+      throw new BadRequestException('amenities must be an array of strings');
+    }
+
+    return this.roomsService.updateAmenities(id, body.amenities);
+  }
+
   @UseGuards(AccessTokenGuard, RolesGuard)
   @Roles('admin')
   @Patch(':id/status')
