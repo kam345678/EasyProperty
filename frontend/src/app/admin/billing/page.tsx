@@ -59,6 +59,7 @@ export default function BillingPage() {
   const grandTotal =
     Number(rent) + Number(serviceFee) + waterUsed * 10 + electricUsed * 7;
 
+  // ✅ แก้ไขส่วนนี้: ส่งเฉพาะฟิลด์ที่ Backend อนุญาต (ตัดฟิลด์ที่เกินออก)
   const handleCreateInvoice = async () => {
     try {
       const payload = {
@@ -75,6 +76,7 @@ export default function BillingPage() {
         amounts: {
           rent: Number(rent),
           serviceFee: Number(serviceFee || 0),
+          // ❌ ห้ามส่ง waterTotal, electricTotal, grandTotal มาที่นี่ เพราะ DTO ไม่รองรับ
         },
       };
 
@@ -88,8 +90,14 @@ export default function BillingPage() {
       setElectricCurrent("");
       setServiceFee(0);
     } catch (error: any) {
+<<<<<<< HEAD
       console.error("Create invoice failed:", error);
       alert("เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้");
+=======
+      console.error("Create invoice failed:", error.response?.data || error)
+      const errorMsg = error.response?.data?.message
+      alert("สร้างบิลไม่สำเร็จ: " + (Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg || "Error 400"));
+>>>>>>> billing_and_register
     }
   };
 

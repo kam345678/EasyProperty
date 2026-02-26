@@ -93,8 +93,8 @@ export default function AdminDashboard() {
     <div className="space-y-6 p-6 bg-slate-50 min-h-screen font-sans">
       {/* --- ส่วนสถิติ --- */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard title="รายได้เดือนนี้" value={summary ? `฿${summary.stats.monthlyRevenue?.toLocaleString()}` : "฿0"} borderColor="border-green-500" />
-        <StatCard title="อัตราการเข้าพัก" value={summary ? `${summary.stats.occupancyRate}%` : "0%"} borderColor="border-blue-400" />
+        <StatCard title="รายได้ทั้งหมด" value={summary ? `฿${summary.stats.monthlyRevenue?.toLocaleString()}` : "฿0"} borderColor="border-green-500" />
+        <StatCard title="อัตราการเข้าพัก" value={summary ? `${summary.stats.occupancyRate}%` : "0%"} borderColor="border-rose-400" />
         <StatCard title="งานรอซ่อม" value={summary ? summary.stats.pendingMaintenance : "0"} borderColor="border-yellow-400" />
         <StatCard title="ห้องว่าง" value={summary ? summary.stats.availableRooms : "0"} borderColor="border-green-400" />
       </div>
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
           )}
         </div>
         <div className="col-span-12 lg:col-span-5 space-y-6">
-          <PaymentTable />
+          <PaymentTable/>
           <RevenueChart data={summary?.revenueChart || []} />
         </div>
       </div>

@@ -19,14 +19,14 @@ export class DashboardAdminService {
         1,
       );
 
-      // 1. สถิติห้องพัก
+      // 1. สถิติห้องพัก (เหมือนเดิม แต่เช็ค Status ให้ดี)
       const [totalRooms, availableRooms, occupiedRooms] = await Promise.all([
         this.roomModel.countDocuments(),
         this.roomModel.countDocuments({ status: 'available' }),
         this.roomModel.countDocuments({ status: 'occupied' }),
       ]);
 
-      // 2. คำนวณรายได้จาก Invoice ที่จ่ายแล้วของเดือนนี้
+      // 2. ✅ แก้ไขรายได้: ดึงจาก amounts.grandTotal และเช็ค payment.status
       const revenueData = await this.invoiceModel.aggregate([
         {
           $match: {
@@ -37,7 +37,7 @@ export class DashboardAdminService {
         { $group: { _id: null, total: { $sum: '$amounts.grandTotal' } } },
       ]);
 
-      // 3. นับงานซ่อมที่ค้างอยู่
+      // 3. นับงานซ่อม (เช็คคำสะกด in-progress หรือ in_progress)
       const pendingMaintenance = await this.maintenanceModel.countDocuments({
         status: { $in: ['pending', 'in-progress'] },
       });
@@ -47,7 +47,7 @@ export class DashboardAdminService {
         .find()
         .sort({ createdAt: -1 })
         .limit(5)
-        .populate('tenantId', 'fullName'); // ตรวจสอบว่าชื่อฟิลด์ใน Schema ตรงกัน
+        .populate('tenantId'); // ดึงมาทั้งก้อนก่อน แล้วค่อยไป map profile.fullName
 
       // 5. ข้อมูลกราฟรายได้ทั้งปีปัจจุบัน (Jan–Dec)
 
