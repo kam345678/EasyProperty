@@ -5,6 +5,7 @@ import { getProfile } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { getMyContract } from "@/services/contracts.service";
+import ModalAlert from "@/components/ModalAlert";
 
 export default function Account() {
   const [user, setUser] = useState<any>(null);
@@ -17,9 +18,14 @@ export default function Account() {
   // password state
   const [oldPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmNewpassword, setconfirmNewpassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">(
+    "info",
+  );
+  const [alertMessage, setAlertMessage] = useState("");
   const router = useRouter();
 
   // avatar
@@ -41,8 +47,14 @@ export default function Account() {
           avatar: data.avatar,
         },
       }));
+      setAlertType("success");
+      setAlertMessage("อัปโหลดรูปโปรไฟล์สำเร็จ");
+      setAlertOpen(true);
     } catch (err) {
       console.error("Upload failed", err);
+      setAlertType("error");
+      setAlertMessage("อัปโหลดรูปโปรไฟล์ไม่สำเร็จ");
+      setAlertOpen(true);
     } finally {
       setUploading(false);
     }
@@ -88,14 +100,22 @@ export default function Account() {
     setPasswordError("");
     setPasswordSuccess("");
 
-    if (newPassword !== confirmPassword) {
-      setPasswordError("รหัสผ่านใหม่ไม่ตรงกัน");
+    if (newPassword !== confirmNewpassword) {
+      setAlertType("error");
+      setAlertMessage("รหัสผ่านใหม่ไม่ตรงกัน");
+      setAlertOpen(true);
       return;
     }
 
     try {
-      const res = await changePassword(oldPassword, newPassword);
-      setPasswordSuccess(res.message);
+      const res = await changePassword(
+        oldPassword,
+        newPassword,
+        confirmNewpassword,
+      );
+      setAlertType("success");
+      setAlertMessage(res.message || "เปลี่ยนรหัสผ่านสำเร็จ");
+      setAlertOpen(true);
       setTimeout(() => {
         router.push("/login");
       }, 1500);
@@ -105,7 +125,9 @@ export default function Account() {
         error.message ||
         "เปลี่ยนรหัสผ่านไม่สำเร็จ";
 
-      setPasswordError(message);
+      setAlertType("error");
+      setAlertMessage(message);
+      setAlertOpen(true);
     }
   }
 
@@ -221,8 +243,8 @@ export default function Account() {
             type="password"
             placeholder="ยืนยันรหัสผ่านใหม่"
             className="w-full border rounded-lg p-2"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            value={confirmNewpassword}
+            onChange={(e) => setconfirmNewpassword(e.target.value)}
           />
 
           <button
@@ -231,13 +253,6 @@ export default function Account() {
           >
             เปลี่ยนรหัสผ่าน
           </button>
-          {passwordError && (
-            <p className="text-red-500 text-sm">{passwordError}</p>
-          )}
-
-          {passwordSuccess && (
-            <p className="text-green-600 text-sm">{passwordSuccess}</p>
-          )}
         </div>
       </div>
 
@@ -278,7 +293,12 @@ export default function Account() {
           <div className="text-sm text-gray-500">ไม่มีสัญญาที่ใช้งานอยู่</div>
         )}
       </div>
-    
+      <ModalAlert
+        open={alertOpen}
+        type={alertType}
+        message={alertMessage}
+        onClose={() => setAlertOpen(false)}
+      />
     </div>
   );
 }

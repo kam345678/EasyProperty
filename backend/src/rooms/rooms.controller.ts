@@ -28,6 +28,27 @@ export class RoomsController {
     return this.roomsService.create(createRoomDto);
   }
 
+  // ✅ สร้างหลายห้องพร้อมกัน (Bulk Create)
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles('admin')
+  @Post('bulk')
+  async createMany(@Body() createRoomDtos: CreateRoomDto[]) {
+    if (!Array.isArray(createRoomDtos) || createRoomDtos.length === 0) {
+      throw new BadRequestException('Body must be a non-empty array of rooms');
+    }
+
+    // เรียก create ทีละตัวผ่าน service
+    const results = await Promise.all(
+      createRoomDtos.map((dto) => this.roomsService.create(dto)),
+    );
+
+    return {
+      message: 'Rooms created successfully',
+      count: results.length,
+      data: results,
+    };
+  }
+
   @Get()
   findAll(@Query('status') status?: RoomStatus) {
     return this.roomsService.findAll(status);

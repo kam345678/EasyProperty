@@ -6,6 +6,7 @@ import {
   getAllContracts,
   deleteContract,
 } from "@/services/contracts.service"
+import ModalAlert from "@/components/ModalAlert"
 
 export default function ContractsPage() {
   const router = useRouter()
@@ -13,6 +14,10 @@ export default function ContractsPage() {
   const [contracts, setContracts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [alertOpen, setAlertOpen] = useState(false)
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info")
+  const [alertMessage, setAlertMessage] = useState("")
+  const [alertConfirmAction, setAlertConfirmAction] = useState<(() => void) | undefined>(undefined)
 
   const fetchContracts = async () => {
     try {
@@ -39,17 +44,24 @@ export default function ContractsPage() {
     router.push(`/admin/Contracts/${id}?edit=true`)
   }
 
-  const handleDelete = async (id: string) => {
-    const confirmDelete = confirm("Are you sure you want to delete this contract?")
-    if (!confirmDelete) return
-
-    try {
-      await deleteContract(id)
-      await fetchContracts()
-    } catch (err) {
-      console.error("Delete failed", err)
-      alert("Failed to delete contract")
-    }
+  const handleDelete = (id: string) => {
+    setAlertType("info")
+    setAlertMessage("Are you sure you want to delete this contract?")
+    setAlertConfirmAction(() => async () => {
+      try {
+        await deleteContract(id)
+        await fetchContracts()
+        setAlertType("success")
+        setAlertMessage("Contract deleted successfully")
+        setAlertConfirmAction(undefined)
+      } catch (err) {
+        console.error("Delete failed", err)
+        setAlertType("error")
+        setAlertMessage("Failed to delete contract")
+        setAlertConfirmAction(undefined)
+      }
+    })
+    setAlertOpen(true)
   }
 
   return (
@@ -140,6 +152,16 @@ export default function ContractsPage() {
           </div>
         )}
       </div>
+      <ModalAlert
+        open={alertOpen}
+        type={alertType}
+        message={alertMessage}
+        onClose={() => {
+          setAlertOpen(false)
+          setAlertConfirmAction(undefined)
+        }}
+        onConfirm={alertConfirmAction}
+      />
     </div>
   )
 }

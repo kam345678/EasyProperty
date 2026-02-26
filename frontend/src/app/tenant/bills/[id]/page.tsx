@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { invoiceService } from "@/services/invoice.service";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Upload, Receipt } from "lucide-react";
+import ModalAlert from "@/components/ModalAlert";
 
 export default function BillDetailPage() {
   const params = useParams();
@@ -12,6 +13,9 @@ export default function BillDetailPage() {
   const [file, setFile] = useState<File | null>(null);
   const [bill, setBill] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
+  const [alertMessage, setAlertMessage] = useState("");
 
   const status = bill?.payment?.status;
 
@@ -48,7 +52,12 @@ export default function BillDetailPage() {
   }, [billId]);
 
   const handleUpload = async () => {
-    if (!file) return alert("กรุณาเลือกไฟล์สลิปก่อนครับ");
+    if (!file) {
+      setAlertType("error");
+      setAlertMessage("กรุณาเลือกไฟล์สลิปก่อนครับ");
+      setAlertOpen(true);
+      return;
+    }
 
     try {
       await invoiceService.payInvoice(
@@ -56,10 +65,18 @@ export default function BillDetailPage() {
         file,
         new Date().toISOString()
       );
-      alert("อัพโหลดสลิปเรียบร้อยแล้ว");
+
+      setAlertType("success");
+      setAlertMessage("อัพโหลดสลิปเรียบร้อยแล้ว");
+      setAlertOpen(true);
+
+      const updated = await invoiceService.getInvoiceById(billId);
+      setBill(updated);
     } catch (error) {
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการอัพโหลด");
+      setAlertType("error");
+      setAlertMessage("เกิดข้อผิดพลาดในการอัพโหลด");
+      setAlertOpen(true);
     }
   };
 
@@ -187,6 +204,12 @@ export default function BillDetailPage() {
           </div>
         </div>
       )}
+      <ModalAlert
+        open={alertOpen}
+        type={alertType}
+        message={alertMessage}
+        onClose={() => setAlertOpen(false)}
+      />
     </>
   );
 }

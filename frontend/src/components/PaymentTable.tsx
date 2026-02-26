@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import Modal from "./Modal"
-import { ChevronDown, Image as ImageIcon, Check, X, Eye, ExternalLink, Loader2 } from "lucide-react"
+import { Image as ImageIcon, Check, X, Eye, ExternalLink, Loader2 } from "lucide-react"
 import { invoiceService } from "@/services/invoice.service"
 
 type Invoice = {
@@ -31,7 +31,6 @@ type Invoice = {
 export default function PaymentTable() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchInvoices = async () => {
@@ -63,9 +62,6 @@ export default function PaymentTable() {
       
       // 2. ✅ ลบรายการออกจากหน้าจอทันที ไม่ต้องรอโหลดใหม่ (Optimistic Update)
       setInvoices((prev) => prev.filter((inv) => inv._id !== id))
-      
-      // 3. ปิด Dropdown
-      setOpenDropdown(null)
       
     } catch (error) {
       console.error("Update Error:", error)
@@ -128,20 +124,22 @@ export default function PaymentTable() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-right relative">
-                      <button
-                        onClick={() => setOpenDropdown(openDropdown === inv._id ? null : inv._id)}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase italic transition-all ${openDropdown === inv._id ? 'bg-slate-800 text-white' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'}`}
-                      >
-                        Manage <ChevronDown size={12} className={openDropdown === inv._id ? 'rotate-180 transition-transform' : ''} />
-                      </button>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleConfirm(inv._id, "paid")}
+                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl text-[9px] font-black uppercase italic bg-emerald-500 text-white hover:bg-emerald-600 transition-all active:scale-95"
+                        >
+                          <Check size={9} /> Approve
+                        </button>
 
-                      {openDropdown === inv._id && (
-                        <div className="absolute right-6 mt-2 w-40 bg-white border border-slate-100 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2">
-                          <button onClick={() => handleConfirm(inv._id, "paid")} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2"><Check size={14} /> Approve</button>
-                          <button onClick={() => handleConfirm(inv._id, "rejected")} className="w-full text-left px-4 py-2 text-[10px] font-black uppercase text-rose-600 hover:bg-rose-50 flex items-center gap-2"><X size={14} /> Reject</button>
-                        </div>
-                      )}
+                        <button
+                          onClick={() => handleConfirm(inv._id, "rejected")}
+                          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl text-[9px] font-black uppercase italic bg-rose-500 text-white hover:bg-rose-600 transition-all active:scale-95"
+                        >
+                          <X size={9} /> Reject
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

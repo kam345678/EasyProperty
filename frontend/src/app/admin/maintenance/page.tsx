@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import ModalAlert from "@/components/ModalAlert"
 
 interface MaintenanceItem {
   id: string
@@ -54,6 +55,10 @@ export default function AdminMaintenancePage() {
   const [data, setData] = useState<MaintenanceItem[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState<MaintenanceItem | null>(null)
+  const [alertOpen, setAlertOpen] = useState(false)
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info")
+  const [alertMessage, setAlertMessage] = useState("")
+  const [alertConfirmAction, setAlertConfirmAction] = useState<(() => void) | undefined>(undefined)
 
   useEffect(() => {
     fetchData()
@@ -111,7 +116,9 @@ export default function AdminMaintenancePage() {
       )
 
       if (!res.ok) {
-        alert("Update failed")
+        setAlertType("error")
+        setAlertMessage("อัปเดตสถานะไม่สำเร็จ")
+        setAlertOpen(true)
         return
       }
 
@@ -124,38 +131,52 @@ export default function AdminMaintenancePage() {
       setSelectedItem((prev) =>
         prev ? { ...prev, status: "resolved" } : prev
       )
+      setAlertType("success")
+      setAlertMessage("อัปเดตสถานะสำเร็จ")
+      setAlertOpen(true)
     } catch (error) {
       console.error(error)
     }
   }
 
-  const handleDelete = async (id: string) => {
-    const confirmDelete = confirm("คุณแน่ใจหรือไม่ว่าต้องการลบงานนี้?")
-    if (!confirmDelete) return
+  const handleDelete = (id: string) => {
+    setAlertType("info")
+    setAlertMessage("คุณแน่ใจหรือไม่ว่าต้องการลบงานนี้?")
+    setAlertConfirmAction(() => async () => {
+      try {
+        const token = localStorage.getItem("accessToken")
 
-    try {
-      const token = localStorage.getItem("accessToken")
+        const res = await fetch(
+          `http://localhost:3000/api/v1/maintenance/${id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
 
-      const res = await fetch(
-        `http://localhost:3000/api/v1/maintenance/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        if (!res.ok) {
+          setAlertType("error")
+          setAlertMessage("ลบงานไม่สำเร็จ")
+          setAlertConfirmAction(undefined)
+          return
         }
-      )
 
-      if (!res.ok) {
-        alert("Delete failed")
-        return
+        setData((prev) => prev.filter((item) => item.id !== id))
+        setSelectedItem(null)
+
+        setAlertType("success")
+        setAlertMessage("ลบงานสำเร็จ")
+        setAlertConfirmAction(undefined)
+      } catch (error) {
+        console.error(error)
+        setAlertType("error")
+        setAlertMessage("เกิดข้อผิดพลาดขณะลบงาน")
+        setAlertConfirmAction(undefined)
       }
-
-      setData((prev) => prev.filter((item) => item.id !== id))
-      setSelectedItem(null)
-    } catch (error) {
-      console.error(error)
-    }
+    })
+    setAlertOpen(true)
   }
 
   return (
@@ -332,6 +353,16 @@ export default function AdminMaintenancePage() {
           </div>
         </div>
       )}
+      <ModalAlert
+        open={alertOpen}
+        type={alertType}
+        message={alertMessage}
+        onClose={() => {
+          setAlertOpen(false)
+          setAlertConfirmAction(undefined)
+        }}
+        onConfirm={alertConfirmAction}
+      />
     </div>
   )
 }

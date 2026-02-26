@@ -123,7 +123,7 @@ export class UsersService {
     userId: string,
     oldPassword: string,
     newPassword: string,
-    confirmNewpassword,
+    confirmNewpassword: string,
   ) {
     const user = await this.userModel.findById(userId).select('+passwordHash');
 

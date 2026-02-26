@@ -7,6 +7,7 @@ import { logout } from '@/lib/api'
 import { useEffect, useState } from "react";
 import { getMyContract } from "@/services/contracts.service";
 import { invoiceService } from "@/services/invoice.service";
+import ModalAlert from "@/components/ModalAlert";
 
 export default function TenantDashboard() {
   const router = useRouter();
@@ -18,17 +19,24 @@ export default function TenantDashboard() {
   const [paymentStatus, setPaymentStatus] = useState<string>("-");
   const [latestInvoiceId, setLatestInvoiceId] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertConfirmAction, setAlertConfirmAction] = useState<(() => void) | undefined>(undefined);
 
-  const handleLogout = async () => {
-    if (!confirm("คุณแน่ใจที่ต้องการออกจากระบบหรือไม่?")) return;
-
-    try {
-      await logout(); // เรียก API logout + ลบ token
-      router.push("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-      router.push("/login");
-    }
+  const handleLogout = () => {
+    setAlertType("info");
+    setAlertMessage("คุณแน่ใจที่ต้องการออกจากระบบหรือไม่?");
+    setAlertConfirmAction(() => async () => {
+      try {
+        await logout();
+        router.push("/login");
+      } catch (error) {
+        console.error("Logout error:", error);
+        router.push("/login");
+      }
+    });
+    setAlertOpen(true);
   };
 
   useEffect(() => {
@@ -271,6 +279,16 @@ export default function TenantDashboard() {
         </div>
 
       </div>
+      <ModalAlert
+        open={alertOpen}
+        type={alertType}
+        message={alertMessage}
+        onClose={() => {
+          setAlertOpen(false);
+          setAlertConfirmAction(undefined);
+        }}
+        onConfirm={alertConfirmAction}
+      />
     </div>
   );
 }

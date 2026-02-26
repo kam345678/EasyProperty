@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Upload, X, Wrench } from "lucide-react";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import ModalAlert from "@/components/ModalAlert";
 
 export default function MaintenancePage() {
   const [title, setTitle] = useState("");
@@ -11,6 +12,9 @@ export default function MaintenancePage() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
+  const [alertMessage, setAlertMessage] = useState("");
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -32,7 +36,9 @@ export default function MaintenancePage() {
 
   const handleSubmit = async () => {
     if (!title || !description) {
-      alert("กรุณากรอกข้อมูลให้ครบถ้วนครับ");
+      setAlertType("error");
+      setAlertMessage("กรุณากรอกข้อมูลให้ครบถ้วนครับ");
+      setAlertOpen(true);
       return;
     }
 
@@ -56,7 +62,9 @@ export default function MaintenancePage() {
         },
       });
 
-      alert("ส่งคำร้องแจ้งซ่อมเรียบร้อยแล้ว");
+      setAlertType("success");
+      setAlertMessage("ส่งคำร้องแจ้งซ่อมเรียบร้อยแล้ว");
+      setAlertOpen(true);
 
       setTitle("");
       setDescription("");
@@ -64,7 +72,9 @@ export default function MaintenancePage() {
       removeImage();
     } catch (error: any) {
       console.error("Maintenance error:", error);
-      alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
+      setAlertType("error");
+      setAlertMessage("เกิดข้อผิดพลาดในการส่งข้อมูล");
+      setAlertOpen(true);
     } finally {
       setLoading(false);
     }
@@ -190,6 +200,12 @@ export default function MaintenancePage() {
           {loading ? "กำลังส่ง..." : "ส่งเรื่องแจ้งซ่อม"}
         </button>
       </div>
+      <ModalAlert
+        open={alertOpen}
+        type={alertType}
+        message={alertMessage}
+        onClose={() => setAlertOpen(false)}
+      />
     </div>
   );
 }

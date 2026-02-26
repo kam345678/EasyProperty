@@ -4,12 +4,16 @@ import React, { useState, useEffect } from 'react'
 import api from '@/lib/api'
 import { getProfile } from '@/lib/auth'
 import { Upload, Save, Trash2 } from 'lucide-react'
+import ModalAlert from "@/components/ModalAlert"
 
 export default function AdminProfilePage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [alertOpen, setAlertOpen] = useState(false)
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info")
+  const [alertMessage, setAlertMessage] = useState("")
 
   useEffect(() => {
     async function fetchUser() {
@@ -55,8 +59,14 @@ export default function AdminProfilePage() {
       }))
 
       setFile(null)
+      setAlertType("success")
+      setAlertMessage("บันทึกรูปโปรไฟล์สำเร็จ")
+      setAlertOpen(true)
     } catch (err) {
       console.error("Failed to upload avatar", err)
+      setAlertType("error")
+      setAlertMessage("อัปโหลดรูปโปรไฟล์ไม่สำเร็จ")
+      setAlertOpen(true)
     } finally {
       setUploading(false)
     }
@@ -73,8 +83,14 @@ export default function AdminProfilePage() {
           avatar: null,
         },
       }))
+      setAlertType("success")
+      setAlertMessage("ลบรูปโปรไฟล์สำเร็จ")
+      setAlertOpen(true)
     } catch (err) {
       console.error("Failed to remove avatar", err)
+      setAlertType("error")
+      setAlertMessage("ลบรูปโปรไฟล์ไม่สำเร็จ")
+      setAlertOpen(true)
     }
 
     setFile(null)
@@ -148,6 +164,12 @@ export default function AdminProfilePage() {
           </div>
         </div>
       </div>
+      <ModalAlert
+        open={alertOpen}
+        type={alertType}
+        message={alertMessage}
+        onClose={() => setAlertOpen(false)}
+      />
     </div>
   )
 }

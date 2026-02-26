@@ -5,6 +5,8 @@ import {
   User, Phone, ShieldCheck, UserCheck
 } from 'lucide-react'
 
+import ModalAlert from "@/components/ModalAlert"
+
 export default function RegisterTenantPage() {
   const [formData, setFormData] = useState({
     roomNumber: '',
@@ -24,6 +26,10 @@ export default function RegisterTenantPage() {
     username: string;
     tempPassword: string;
   } | null>(null)
+
+  const [alertOpen, setAlertOpen] = useState(false)
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info")
+  const [alertMessage, setAlertMessage] = useState("")
 
   // ✅ ตั้งค่าพอร์ตให้ตรงกับ Backend
   const BACKEND_URL = "http://localhost:3000/api/v1";
@@ -74,7 +80,9 @@ export default function RegisterTenantPage() {
     e.preventDefault()
     
     if (formData.idCard.length !== 13 || formData.phone.length !== 10) {
-      alert("กรุณากรอกข้อมูลเลขบัตรและเบอร์โทรให้ครบถ้วน");
+      setAlertType("error")
+      setAlertMessage("กรุณากรอกข้อมูลเลขบัตรและเบอร์โทรให้ครบถ้วน")
+      setAlertOpen(true)
       return;
     }
 
@@ -82,7 +90,9 @@ export default function RegisterTenantPage() {
     const currentToken = localStorage.getItem('accessToken');
 
     if (!currentToken) {
-        alert("ไม่พบรหัสเข้าใช้งาน (Token) กรุณา Login ใหม่");
+        setAlertType("error")
+        setAlertMessage("ไม่พบรหัสเข้าใช้งาน (Token) กรุณา Login ใหม่")
+        setAlertOpen(true)
         setIsLoading(false);
         return;
     }
@@ -151,10 +161,14 @@ export default function RegisterTenantPage() {
         username: userResult.user?.email || formData.email,
         tempPassword: tempPass 
       })
-      alert("ลงทะเบียนผู้เช่าสำเร็จ!")
+      setAlertType("success")
+      setAlertMessage("ลงทะเบียนผู้เช่าสำเร็จ!")
+      setAlertOpen(true)
 
     } catch (error: any) {
-      alert(error.message || "เกิดข้อผิดพลาด")
+      setAlertType("error")
+      setAlertMessage(error.message || "เกิดข้อผิดพลาด")
+      setAlertOpen(true)
     } finally {
       setIsLoading(false)
     }
@@ -283,6 +297,12 @@ export default function RegisterTenantPage() {
           </form>
         </div>
       </main>
+      <ModalAlert
+        open={alertOpen}
+        type={alertType}
+        message={alertMessage}
+        onClose={() => setAlertOpen(false)}
+      />
     </div>
   )
 }

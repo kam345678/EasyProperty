@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Pencil, Trash2, Save, FileText, User, DoorOpen, CalendarDays, Banknote, ArrowLeft, X } from "lucide-react"
+import ModalAlert from "@/components/ModalAlert"
 
 // ✅ import service functions
 import {
@@ -18,6 +19,10 @@ export default function ContractDetailPage() {
   const [contract, setContract] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalType, setModalType] = useState<"success" | "error" | "info">("info")
+  const [modalMessage, setModalMessage] = useState("")
+  const [confirmAction, setConfirmAction] = useState<null | (() => void)>(null)
 
   // ✅ ใช้ service แทน fetch ตรงๆ
   useEffect(() => {
@@ -65,8 +70,10 @@ export default function ContractDetailPage() {
         },
       })
 
-      alert("อัปเดตสัญญาสำเร็จ")
-      setIsEditing(false)
+      setModalType("success")
+      setModalMessage("อัปเดตสัญญาสำเร็จ")
+      setConfirmAction(null)
+      setModalOpen(true)
     } catch (err: any) {
       console.error("Update error:", err)
 
@@ -75,25 +82,37 @@ export default function ContractDetailPage() {
         err?.response?.data?.error ||
         "เกิดข้อผิดพลาดในการอัปเดต"
 
-      if (Array.isArray(backendMessage)) {
-        alert("อัปเดตไม่สำเร็จ:\n" + backendMessage.join("\n"))
-      } else {
-        alert("อัปเดตไม่สำเร็จ:\n" + backendMessage)
-      }
+      const message = Array.isArray(backendMessage)
+        ? backendMessage.join("\n")
+        : backendMessage
+
+      setModalType("error")
+      setModalMessage("อัปเดตไม่สำเร็จ:\n" + message)
+      setConfirmAction(null)
+      setModalOpen(true)
     }
   }
 
   const handleDelete = async () => {
-    if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบสัญญานี้?")) return
-
-    try {
-      await deleteContract(id as string)
-      alert("ลบสัญญาสำเร็จ")
-      router.push("/admin/contracts")
-    } catch (err) {
-      console.error(err)
-      alert("เกิดข้อผิดพลาดในการลบ")
-    }
+    setModalType("info")
+    setModalMessage("คุณแน่ใจหรือไม่ว่าต้องการลบสัญญานี้?")
+    setConfirmAction(() => async () => {
+      try {
+        await deleteContract(id as string)
+        setModalType("success")
+        setModalMessage("ลบสัญญาสำเร็จ")
+        setConfirmAction(null)
+        setModalOpen(true)
+        router.push("/admin/contracts")
+      } catch (err) {
+        setModalType("error")
+        setModalMessage("เกิดข้อผิดพลาดในการลบ")
+        setConfirmAction(null)
+        setModalOpen(true)
+      }
+    })
+    setModalOpen(true)
+    return
   }
 
   const statusConfig: Record<string, { label: string; classes: string }> = {
@@ -333,6 +352,16 @@ export default function ContractDetailPage() {
         </SectionCard>
 
       </div>
+      <ModalAlert
+        open={modalOpen}
+        type={modalType}
+        message={modalMessage}
+        onClose={() => {
+          setModalOpen(false)
+          setConfirmAction(null)
+        }}
+        onConfirm={confirmAction ?? undefined}
+      />
     </div>
   )
 }

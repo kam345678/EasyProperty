@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import ModalAlert from "@/components/ModalAlert";
 
 export default function BillingPage() {
   const [contracts, setContracts] = useState<any[]>([]);
@@ -20,6 +21,10 @@ export default function BillingPage() {
 
   const [billingPeriod, setBillingPeriod] = useState("");
   const [contractId, setContractId] = useState("");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"success" | "error">("success");
+  const [modalMessage, setModalMessage] = useState("");
 
   useEffect(() => {
     const fetchContracts: () => Promise<void> = async () => {
@@ -83,21 +88,26 @@ export default function BillingPage() {
       const res = await api.post("/invoices", payload);
 
       console.log("Invoice created:", res.data);
-      alert("สร้างใบแจ้งหนี้สำเร็จ");
+      setModalType("success");
+      setModalMessage("สร้างใบแจ้งหนี้สำเร็จ");
+      setModalOpen(true);
 
       // reset meter inputs after success
       setWaterCurrent("");
       setElectricCurrent("");
       setServiceFee(0);
     } catch (error: any) {
-<<<<<<< HEAD
-      console.error("Create invoice failed:", error);
-      alert("เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้");
-=======
-      console.error("Create invoice failed:", error.response?.data || error)
-      const errorMsg = error.response?.data?.message
-      alert("สร้างบิลไม่สำเร็จ: " + (Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg || "Error 400"));
->>>>>>> billing_and_register
+      console.error("Create invoice failed:", error.response?.data || error);
+      const errorMsg = error.response?.data?.message;
+
+      setModalType("error");
+      setModalMessage(
+        "สร้างบิลไม่สำเร็จ: " +
+          (Array.isArray(errorMsg)
+            ? errorMsg.join(", ")
+            : errorMsg || "Error 400"),
+      );
+      setModalOpen(true);
     }
   };
 
@@ -380,6 +390,14 @@ export default function BillingPage() {
           สร้างใบแจ้งหนี้
         </button>
       </div>
+      <ModalAlert
+        open={modalOpen}
+        type={modalType}
+        message={modalMessage}
+        duration={5000}
+        onClose={() => setModalOpen(false)}
+      />
+      ˝
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   X, User, FileText, 
   BedDouble, Zap, Droplets, Phone, Plus 
 } from "lucide-react";
+import ModalAlert from "@/components/ModalAlert";
 
 export default function AdminDashboard() {
   const [floors, setFloors] = useState<any[]>([]);
@@ -18,6 +19,9 @@ export default function AdminDashboard() {
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newFurniture, setNewFurniture] = useState("");
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
+  const [alertMessage, setAlertMessage] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,10 +86,15 @@ export default function AdminDashboard() {
         })));
         
         console.log("บันทึกเฟอร์นิเจอร์สำเร็จ!");
+        setAlertType("success");
+        setAlertMessage("บันทึกข้อมูลสำเร็จ");
+        setAlertOpen(true);
       }
     } catch (error: any) {
       console.error("Update Error:", error.response?.data || error);
-      alert("ไม่สามารถบันทึกได้: " + (error.response?.data?.message || "เกิดข้อผิดพลาด"));
+      setAlertType("error");
+      setAlertMessage("ไม่สามารถบันทึกได้: " + (error.response?.data?.message || "เกิดข้อผิดพลาด"));
+      setAlertOpen(true);
     }
   };
 
@@ -108,8 +117,8 @@ export default function AdminDashboard() {
           )}
         </div>
         <div className="col-span-12 lg:col-span-5 space-y-6">
-          <PaymentTable/>
           <RevenueChart data={summary?.revenueChart || []} />
+          <PaymentTable/>
         </div>
       </div>
 
@@ -213,6 +222,12 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+    <ModalAlert
+      open={alertOpen}
+      type={alertType}
+      message={alertMessage}
+      onClose={() => setAlertOpen(false)}
+    />
     </div>
   );
 }

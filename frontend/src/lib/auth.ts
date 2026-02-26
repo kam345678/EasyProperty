@@ -27,12 +27,14 @@ export async function getProfile() {
 
 export async function changePassword(
   oldPassword: string,
-  newPassword: string
+  newPassword: string,
+  confirmNewpassword:string,
 ) {
   try {
     const res = await api.patch("/users/me/password", {
       oldPassword,
       newPassword,
+      confirmNewpassword,
     });
     return res.data;
   } catch (error: any) {

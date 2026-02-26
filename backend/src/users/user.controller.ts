@@ -45,6 +45,7 @@ export class UserController {
     console.log('USER FROM TOKEN:', req.user);
     console.log('OLD PASSWORD:', oldPassword);
     console.log('NEW PASSWORD:', newPassword);
+    console.log('CONFIRM PASSWROD', confirmNewpassword);
 
     return this.usersService.changePassword(
       req.user.sub,

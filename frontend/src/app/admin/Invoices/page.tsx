@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { Eye, Trash2, Search } from "lucide-react"
 import { invoiceService } from "@/services/invoice.service"
+import ModalAlert from "@/components/ModalAlert"
 
 interface Invoice {
   _id: string
@@ -37,6 +38,10 @@ export default function AdminInvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+  const [alertOpen, setAlertOpen] = useState(false)
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("info")
+  const [alertMessage, setAlertMessage] = useState("")
+  const [alertConfirmAction, setAlertConfirmAction] = useState<(() => void) | undefined>(undefined)
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -67,27 +72,38 @@ export default function AdminInvoicesPage() {
     )
   }, [search, invoices])
 
-  const total = invoices.reduce((sum, inv) => sum + (inv.amounts?.grandTotal || 0), 0)
-
-  const outstanding = invoices
-    .filter(i => i.payment?.status === "pending")
+  const total = invoices
+    .filter(inv => inv.payment?.status === "paid")
     .reduce((sum, inv) => sum + (inv.amounts?.grandTotal || 0), 0)
 
-  const handleDelete = async (id: string) => {
-    const confirmDelete = window.confirm("คุณต้องการลบบิลนี้ใช่หรือไม่?")
-    if (!confirmDelete) return
+  const outstanding = invoices
+    .filter(inv =>
+      inv.payment?.status === "pending" ||
+      inv.payment?.status === "rejected"
+    )
+    .reduce((sum, inv) => sum + (inv.amounts?.grandTotal || 0), 0)
 
-    try {
-      await invoiceService.deleteInvoice(id)
-
-      setInvoices(prev => prev.filter(inv => inv._id !== id))
-    } catch (error: any) {
-      console.error("Failed to delete invoice:", error)
-      alert(
-        error?.response?.data?.message ||
-        "ไม่สามารถลบบิลได้ กรุณาลองใหม่อีกครั้ง"
-      )
-    }
+  const handleDelete = (id: string) => {
+    setAlertType("info")
+    setAlertMessage("คุณต้องการลบบิลนี้ใช่หรือไม่?")
+    setAlertConfirmAction(() => async () => {
+      try {
+        await invoiceService.deleteInvoice(id)
+        setInvoices(prev => prev.filter(inv => inv._id !== id))
+        setAlertType("success")
+        setAlertMessage("ลบบิลสำเร็จ")
+        setAlertConfirmAction(undefined)
+      } catch (error: any) {
+        console.error("Failed to delete invoice:", error)
+        setAlertType("error")
+        setAlertMessage(
+          error?.response?.data?.message ||
+          "ไม่สามารถลบบิลได้ กรุณาลองใหม่อีกครั้ง"
+        )
+        setAlertConfirmAction(undefined)
+      }
+    })
+    setAlertOpen(true)
   }
 
   const handleConfirm = async (id: string, status: "paid" | "rejected") => {
@@ -360,6 +376,16 @@ export default function AdminInvoicesPage() {
       </div>
     )}
 
+      <ModalAlert
+        open={alertOpen}
+        type={alertType}
+        message={alertMessage}
+        onClose={() => {
+          setAlertOpen(false)
+          setAlertConfirmAction(undefined)
+        }}
+        onConfirm={alertConfirmAction}
+      />
     </div>
   )
 }
