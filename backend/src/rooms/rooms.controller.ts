@@ -1,4 +1,15 @@
-import { Controller, Post, Get, Param, Body, Query, Patch, ParseEnumPipe, UseGuards, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Param,
+  Body,
+  Query,
+  Patch,
+  ParseEnumPipe,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { RoomStatus } from './schema/room.schema';
@@ -33,7 +44,7 @@ export class RoomsController {
   @Patch(':id/amenities')
   async updateAmenities(
     @Param('id') id: string,
-    @Body() body: { amenities: string[] }, 
+    @Body() body: { amenities: string[] },
   ) {
     console.log(`[Backend Log] ID: ${id}, Data:`, body);
 

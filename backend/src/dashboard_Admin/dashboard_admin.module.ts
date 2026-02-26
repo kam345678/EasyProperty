@@ -4,7 +4,7 @@ import { DashboardAdminController } from './dashboard_admin.controller';
 import { DashboardAdminService } from './dashboard_admin.service';
 // Import Schema ของคนอื่นมาใช้
 import { RoomSchema } from '../rooms/schema/room.schema';
-import { InvoiceSchema } from "../invoices/schemas/invoice.schema";
+import { InvoiceSchema } from '../invoices/schemas/invoice.schema';
 import { MaintenanceSchema } from '../maintenance/schema/maintenance.schema';
 
 @Module({
