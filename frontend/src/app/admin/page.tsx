@@ -7,8 +7,8 @@ import PaymentTable from "@/components/PaymentTable";
 import RevenueChart from "@/components/RevenueChart";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { 
-  X, User, FileText, Calendar, DollarSign, 
-  BedDouble, Zap, Droplets, Phone, Mail, Plus 
+  X, User, FileText, 
+  BedDouble, Zap, Droplets, Phone, Plus 
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -94,9 +94,9 @@ export default function AdminDashboard() {
       {/* --- ส่วนสถิติ --- */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard title="รายได้เดือนนี้" value={summary ? `฿${summary.stats.monthlyRevenue?.toLocaleString()}` : "฿0"} borderColor="border-green-500" />
-        <StatCard title="อัตราการเข้าพัก" value={summary ? `${summary.stats.occupancyRate}%` : "0%"} borderColor="border-rose-400" />
+        <StatCard title="อัตราการเข้าพัก" value={summary ? `${summary.stats.occupancyRate}%` : "0%"} borderColor="border-blue-400" />
         <StatCard title="งานรอซ่อม" value={summary ? summary.stats.pendingMaintenance : "0"} borderColor="border-yellow-400" />
-        <StatCard title="ห้องว่าง" value={summary ? summary.stats.availableRooms : "0"} borderColor="border-blue-400" />
+        <StatCard title="ห้องว่าง" value={summary ? summary.stats.availableRooms : "0"} borderColor="border-green-400" />
       </div>
 
       <div className="grid grid-cols-12 gap-6">
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
           )}
         </div>
         <div className="col-span-12 lg:col-span-5 space-y-6">
-          <PaymentTable invoices={summary?.recentInvoices || []} />
+          <PaymentTable />
           <RevenueChart data={summary?.revenueChart || []} />
         </div>
       </div>

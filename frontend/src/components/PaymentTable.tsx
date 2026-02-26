@@ -28,6 +28,8 @@ type Invoice = {
   }
 }
 
+
+
 export default function PaymentTable() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)

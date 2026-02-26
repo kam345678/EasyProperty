@@ -119,7 +119,7 @@ export class MaintenanceService {
     if (status === 'completed') {
       await this.roomsService.updateStatus(
         maintenance.roomId.toString(),
-        RoomStatus.AVAILABLE,
+        RoomStatus.OCCUPIED,
       );
     }
 

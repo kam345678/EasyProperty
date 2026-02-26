@@ -13,7 +13,11 @@ export class DashboardAdminService {
   async getStats() {
     try {
       const today = new Date();
-      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const firstDayOfMonth = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1,
+      );
 
       // 1. สถิติห้องพัก
       const [totalRooms, availableRooms, occupiedRooms] = await Promise.all([
@@ -24,53 +28,92 @@ export class DashboardAdminService {
 
       // 2. คำนวณรายได้จาก Invoice ที่จ่ายแล้วของเดือนนี้
       const revenueData = await this.invoiceModel.aggregate([
-        { 
-          $match: { 
-            status: 'paid', 
-            updatedAt: { $gte: firstDayOfMonth } 
-          } 
+        {
+          $match: {
+            'payment.status': 'paid',
+            updatedAt: { $gte: firstDayOfMonth },
+          },
         },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+        { $group: { _id: null, total: { $sum: '$amounts.grandTotal' } } },
       ]);
 
       // 3. นับงานซ่อมที่ค้างอยู่
       const pendingMaintenance = await this.maintenanceModel.countDocuments({
-        status: { $in: ['pending', 'in-progress'] }
+        status: { $in: ['pending', 'in-progress'] },
       });
 
       // 4. ดึง Invoice ล่าสุด 5 รายการ
-      const recentInvoices = await this.invoiceModel.find()
+      const recentInvoices = await this.invoiceModel
+        .find()
         .sort({ createdAt: -1 })
         .limit(5)
         .populate('tenantId', 'fullName'); // ตรวจสอบว่าชื่อฟิลด์ใน Schema ตรงกัน
 
-      // 5. ข้อมูลกราฟรายได้ (ตัวอย่าง 6 เดือนย้อนหลัง)
-      // เพื่อนสามารถใช้ aggregate ทำข้อมูลจริงได้ แต่เบื้องต้นส่งค่า Static ผสมค่าจริงไปก่อน
-      const revenueChart = [
-        { month: 'Nov', revenue: 30000 },
-        { month: 'Dec', revenue: 50000 },
-        { month: 'Jan', revenue: 80000 },
-        { month: 'Feb', revenue: revenueData[0]?.total || 0 },
+      // 5. ข้อมูลกราฟรายได้ทั้งปีปัจจุบัน (Jan–Dec)
+
+      const currentYear = today.getFullYear().toString();
+
+      const revenueChartData = await this.invoiceModel.aggregate([
+        {
+          $match: {
+            'payment.status': 'paid',
+            billingPeriod: { $regex: `^${currentYear}-` }, // เอาเฉพาะปีปัจจุบัน
+          },
+        },
+        {
+          $group: {
+            _id: '$billingPeriod',
+            total: { $sum: '$amounts.grandTotal' },
+          },
+        },
+      ]);
+
+      const monthNames = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
+
+      // สร้าง array 12 เดือน และใส่ค่า 0 ไว้ก่อน
+      const revenueChart = monthNames.map((month, index) => {
+        const monthKey = `${currentYear}-${String(index + 1).padStart(2, '0')}`;
+        const found = revenueChartData.find((item) => item._id === monthKey);
+
+        return {
+          month,
+          revenue: found ? found.total : 0,
+        };
+      });
 
       return {
         stats: {
           monthlyRevenue: revenueData[0]?.total || 0,
-          occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
+          occupancyRate:
+            totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
           pendingMaintenance,
           availableRooms,
         },
-        recentInvoices: recentInvoices.map(inv => ({
+        recentInvoices: recentInvoices.map((inv) => ({
           id: inv._id,
-          invoiceNo: inv.invoiceNumber || `#INV-${inv._id.toString().slice(-4)}`,
+          invoiceNo:
+            inv.invoiceNumber || `#INV-${inv._id.toString().slice(-4)}`,
           tenant: inv.tenantId?.fullName || 'ไม่ระบุชื่อ',
-          amount: `฿${inv.totalAmount?.toLocaleString() || 0}`,
-          status: inv.status
+          amount: `฿${inv.amounts?.grandTotal?.toLocaleString() || 0}`,
+          status: inv.payment?.status,
         })),
-        revenueChart
+        revenueChart,
       };
     } catch (error) {
-      console.error("Dashboard Stats Error:", error);
+      console.error('Dashboard Stats Error:', error);
       throw error;
     }
   }

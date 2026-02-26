@@ -1,60 +1,63 @@
-'use client'
-import { useEffect, useState } from "react"
-import api from "@/lib/api"
+"use client";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 
 export default function BillingPage() {
-  const [contracts, setContracts] = useState<any[]>([])
-  const [selectedRoomId, setSelectedRoomId] = useState<string>("")
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [selectedRoomId, setSelectedRoomId] = useState<string>("");
 
-  const currentRoom = contracts.find(
-    (c) => c.roomId?._id === selectedRoomId
-  )
+  const currentRoom = contracts.find((c) => c.roomId?._id === selectedRoomId);
 
   // ----- DTO FIELDS (อ้างอิง create-invoice.dto ฝั่ง BE) -----
 
-  const rent = Number(currentRoom?.roomId?.prices || 0)
+  const rent = Number(currentRoom?.roomId?.prices || 0);
 
-  const [waterCurrent, setWaterCurrent] = useState<string>('')
+  const [waterCurrent, setWaterCurrent] = useState<string>("");
 
-  const [electricCurrent, setElectricCurrent] = useState<string>('')
+  const [electricCurrent, setElectricCurrent] = useState<string>("");
 
-  const [serviceFee, setServiceFee] = useState(0)
+  const [serviceFee, setServiceFee] = useState(0);
 
-  const [billingPeriod, setBillingPeriod] = useState('')
-  const [contractId, setContractId] = useState('')
+  const [billingPeriod, setBillingPeriod] = useState("");
+  const [contractId, setContractId] = useState("");
 
   useEffect(() => {
-    const fetchContracts = async () => {
+    const fetchContracts: () => Promise<void> = async () => {
       try {
-        const res = await api.get("/contracts")
-        // กรองเฉพาะ contract ที่ active
+        const res = await api.get("/contracts");
+
         const activeContracts = res.data.filter(
-          (c: any) => c.status === "active"
-        )
-        setContracts(activeContracts)
+          (c: any) => c.status === "active",
+        );
+
+        setContracts(activeContracts);
 
         if (activeContracts.length > 0) {
-          setSelectedRoomId(activeContracts[0].roomId._id)
-          setContractId(activeContracts[0]._id)
+          setSelectedRoomId(activeContracts[0].roomId._id);
+          setContractId(activeContracts[0]._id);
         }
       } catch (err) {
-        console.error("Failed to load contracts", err)
+        console.error("Failed to load contracts", err);
       }
-    }
+    };
 
-    fetchContracts()
-  }, [])
+    fetchContracts();
+  }, []);
 
-  const previousWater = Number(currentRoom?.roomId?.lastMeterReading?.water || 0)
-  const waterUsedRaw = Number(waterCurrent || 0) - previousWater
-  const waterUsed = waterUsedRaw > 0 ? waterUsedRaw : 0
+  const previousWater = Number(
+    currentRoom?.roomId?.lastMeterReading?.water || 0,
+  );
+  const waterUsedRaw = Number(waterCurrent || 0) - previousWater;
+  const waterUsed = waterUsedRaw > 0 ? waterUsedRaw : 0;
 
-  const previousElectric = Number(currentRoom?.roomId?.lastMeterReading?.electric || 0)
-  const electricUsedRaw = Number(electricCurrent || 0) - previousElectric
-  const electricUsed = electricUsedRaw > 0 ? electricUsedRaw : 0
+  const previousElectric = Number(
+    currentRoom?.roomId?.lastMeterReading?.electric || 0,
+  );
+  const electricUsedRaw = Number(electricCurrent || 0) - previousElectric;
+  const electricUsed = electricUsedRaw > 0 ? electricUsedRaw : 0;
 
   const grandTotal =
-    Number(rent) + Number(serviceFee) + (waterUsed * 10) + (electricUsed * 7)
+    Number(rent) + Number(serviceFee) + waterUsed * 10 + electricUsed * 7;
 
   const handleCreateInvoice = async () => {
     try {
@@ -73,42 +76,50 @@ export default function BillingPage() {
           rent: Number(rent),
           serviceFee: Number(serviceFee || 0),
         },
-      }
+      };
 
-      const res = await api.post("/invoices", payload)
+      const res = await api.post("/invoices", payload);
 
-      console.log("Invoice created:", res.data)
-      alert("สร้างใบแจ้งหนี้สำเร็จ")
+      console.log("Invoice created:", res.data);
+      alert("สร้างใบแจ้งหนี้สำเร็จ");
 
       // reset meter inputs after success
-      setWaterCurrent("")
-      setElectricCurrent("")
-      setServiceFee(0)
+      setWaterCurrent("");
+      setElectricCurrent("");
+      setServiceFee(0);
     } catch (error: any) {
-      console.error("Create invoice failed:", error)
-      alert("เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้")
+      console.error("Create invoice failed:", error);
+      alert("เกิดข้อผิดพลาดในการสร้างใบแจ้งหนี้");
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
-
         {/* ── Page Title ── */}
         <div>
-          <p className="text-xs font-semibold tracking-widest text-amber-600 uppercase mb-1">สร้างใบแจ้งหนี้</p>
-          <h1 className="text-3xl font-bold text-gray-900">แจ้งค่าเช่า · ค่าน้ำ · ค่าไฟ</h1>
-          <p className="text-sm text-gray-400 mt-1">กรุณากรอกข้อมูลมิเตอร์และค่าใช้จ่าย เพื่อสร้างบิลสำหรับผู้เช่า</p>
+          <p className="text-xs font-semibold tracking-widest text-amber-600 uppercase mb-1">
+            สร้างใบแจ้งหนี้
+          </p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            แจ้งค่าเช่า · ค่าน้ำ · ค่าไฟ
+          </h1>
+          <p className="text-sm text-gray-400 mt-1">
+            กรุณากรอกข้อมูลมิเตอร์และค่าใช้จ่าย เพื่อสร้างบิลสำหรับผู้เช่า
+          </p>
         </div>
 
         {/* ── Card 1: ห้องและผู้เช่า ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 pt-5 pb-3 flex items-center gap-3 border-b border-gray-100">
-            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base">🏠</div>
-            <span className="font-semibold text-gray-800 text-sm">ข้อมูลห้องและผู้เช่า</span>
+            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base">
+              🏠
+            </div>
+            <span className="font-semibold text-gray-800 text-sm">
+              ข้อมูลห้องและผู้เช่า
+            </span>
           </div>
           <div className="p-6 space-y-5">
-
             {/* Room select */}
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -117,20 +128,15 @@ export default function BillingPage() {
               <select
                 value={selectedRoomId}
                 onChange={(e) => {
-                  const roomId = e.target.value
-                  setSelectedRoomId(roomId)
-                  const found = contracts.find(
-                    (c) => c.roomId._id === roomId
-                  )
-                  if (found) setContractId(found._id)
+                  const roomId = e.target.value;
+                  setSelectedRoomId(roomId);
+                  const found = contracts.find((c) => c.roomId._id === roomId);
+                  if (found) setContractId(found._id);
                 }}
                 className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-800 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition"
               >
                 {contracts.map((contract) => (
-                  <option
-                    key={contract.roomId._id}
-                    value={contract.roomId._id}
-                  >
+                  <option key={contract.roomId._id} value={contract.roomId._id}>
                     ห้อง {contract.roomId.roomNumber}
                   </option>
                 ))}
@@ -164,7 +170,9 @@ export default function BillingPage() {
                 onChange={(e) => setBillingPeriod(e.target.value)}
                 className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-800 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition"
               />
-              <p className="text-xs text-gray-400 mt-1.5">ตัวอย่าง: 2026-02 (กุมภาพันธ์ 2026)</p>
+              <p className="text-xs text-gray-400 mt-1.5">
+                ตัวอย่าง: 2026-02 (กุมภาพันธ์ 2026)
+              </p>
             </div>
           </div>
         </div>
@@ -172,19 +180,22 @@ export default function BillingPage() {
         {/* ── Divider ── */}
         <div className="flex items-center gap-4">
           <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs font-semibold tracking-widest text-gray-400 uppercase">ข้อมูลมิเตอร์</span>
+          <span className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+            ข้อมูลมิเตอร์
+          </span>
           <div className="flex-1 h-px bg-gray-200" />
         </div>
 
         {/* ── Card 2: มิเตอร์ ── */}
         <div className="grid sm:grid-cols-2 gap-4">
-
           {/* Water */}
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-lg">💧</span>
-                <span className="font-semibold text-blue-800 text-sm">ค่าน้ำ</span>
+                <span className="font-semibold text-blue-800 text-sm">
+                  ค่าน้ำ
+                </span>
               </div>
               <span className="text-xs bg-blue-700 text-white px-2.5 py-0.5 rounded-full font-mono">
                 ฿10 / หน่วย
@@ -193,7 +204,9 @@ export default function BillingPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-blue-400 mb-1.5">เลขมิเตอร์ครั้งก่อน</label>
+                <label className="block text-xs text-blue-400 mb-1.5">
+                  เลขมิเตอร์ครั้งก่อน
+                </label>
                 <input
                   type="number"
                   value={currentRoom?.roomId?.lastMeterReading?.water || 0}
@@ -202,12 +215,14 @@ export default function BillingPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-blue-600 font-semibold mb-1.5">เลขมิเตอร์ล่าสุด</label>
+                <label className="block text-xs text-blue-600 font-semibold mb-1.5">
+                  เลขมิเตอร์ล่าสุด
+                </label>
                 <input
                   type="number"
                   value={waterCurrent}
                   onChange={(e) => {
-                    setWaterCurrent(e.target.value)
+                    setWaterCurrent(e.target.value);
                   }}
                   className="w-full p-3 rounded-xl border-2 border-blue-300 bg-white text-blue-900 font-mono text-base font-semibold focus:ring-2 focus:ring-blue-400 focus:border-blue-500 outline-none transition"
                 />
@@ -227,7 +242,9 @@ export default function BillingPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-lg">⚡</span>
-                <span className="font-semibold text-yellow-800 text-sm">ค่าไฟ</span>
+                <span className="font-semibold text-yellow-800 text-sm">
+                  ค่าไฟ
+                </span>
               </div>
               <span className="text-xs bg-yellow-500 text-white px-2.5 py-0.5 rounded-full font-mono">
                 ฿7 / หน่วย
@@ -236,7 +253,9 @@ export default function BillingPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-yellow-400 mb-1.5">เลขมิเตอร์ครั้งก่อน</label>
+                <label className="block text-xs text-yellow-400 mb-1.5">
+                  เลขมิเตอร์ครั้งก่อน
+                </label>
                 <input
                   type="number"
                   value={currentRoom?.roomId?.lastMeterReading?.electric || 0}
@@ -245,12 +264,14 @@ export default function BillingPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-yellow-700 font-semibold mb-1.5">เลขมิเตอร์ล่าสุด</label>
+                <label className="block text-xs text-yellow-700 font-semibold mb-1.5">
+                  เลขมิเตอร์ล่าสุด
+                </label>
                 <input
                   type="number"
                   value={electricCurrent}
                   onChange={(e) => {
-                    setElectricCurrent(e.target.value)
+                    setElectricCurrent(e.target.value);
                   }}
                   className="w-full p-3 rounded-xl border-2 border-yellow-300 bg-white text-yellow-900 font-mono text-base font-semibold focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 outline-none transition"
                 />
@@ -269,15 +290,21 @@ export default function BillingPage() {
         {/* ── Divider ── */}
         <div className="flex items-center gap-4">
           <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs font-semibold tracking-widest text-gray-400 uppercase">สรุปค่าใช้จ่าย</span>
+          <span className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+            สรุปค่าใช้จ่าย
+          </span>
           <div className="flex-1 h-px bg-gray-200" />
         </div>
 
         {/* ── Card 3: ค่าใช้จ่าย ── */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 pt-5 pb-3 flex items-center gap-3 border-b border-gray-100">
-            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base">🧾</div>
-            <span className="font-semibold text-gray-800 text-sm">รายการค่าใช้จ่าย</span>
+            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base">
+              🧾
+            </div>
+            <span className="font-semibold text-gray-800 text-sm">
+              รายการค่าใช้จ่าย
+            </span>
           </div>
 
           <div className="px-6 pt-2 pb-6">
@@ -315,15 +342,20 @@ export default function BillingPage() {
                 <p className="text-xs text-gray-400">ยอดรวมทั้งหมด</p>
                 <p className="text-gray-500 text-xs mt-0.5">
                   {billingPeriod
-                    ? new Date(billingPeriod + "-01").toLocaleDateString("th-TH", {
-                        month: "long",
-                        year: "numeric",
-                      })
+                    ? new Date(billingPeriod + "-01").toLocaleDateString(
+                        "th-TH",
+                        {
+                          month: "long",
+                          year: "numeric",
+                        },
+                      )
                     : "กรุณาเลือกรอบบิล"}
                 </p>
               </div>
               <div className="flex items-end gap-1">
-                <span className="text-sm text-yellow-500 font-mono mb-1">฿</span>
+                <span className="text-sm text-yellow-500 font-mono mb-1">
+                  ฿
+                </span>
                 <span className="text-4xl font-bold text-yellow-400 font-mono tracking-tight leading-none">
                   {grandTotal.toLocaleString()}
                 </span>
@@ -339,8 +371,7 @@ export default function BillingPage() {
         >
           สร้างใบแจ้งหนี้
         </button>
-
       </div>
     </div>
-  )
+  );
 }

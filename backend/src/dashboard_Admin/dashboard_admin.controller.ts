@@ -1,4 +1,9 @@
-import { Controller, Get, UseGuards, InternalServerErrorException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { DashboardAdminService } from './dashboard_admin.service';
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -14,8 +19,10 @@ export class DashboardAdminController {
   async getSummary() {
     try {
       return await this.dashboardService.getStats();
-    } catch (error) {
-      throw new InternalServerErrorException('ไม่สามารถดึงข้อมูล Dashboard ได้');
+    } catch {
+      throw new InternalServerErrorException(
+        'ไม่สามารถดึงข้อมูล Dashboard ได้',
+      );
     }
   }
 }
