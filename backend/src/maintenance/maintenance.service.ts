@@ -152,10 +152,11 @@ export class MaintenanceService {
 
     const updatedMaintenance = await maintenance.save();
 
+    // ✅ อัปเดตสถานะห้องถ้าเปลี่ยนเป็น completed (ซ่อมเสร็จ) แล้ว Status จะกลายเป็น occupied
     if (status === 'completed') {
       await this.roomsService.updateStatus(
         maintenance.roomId.toString(),
-        RoomStatus.AVAILABLE,
+        RoomStatus.OCCUPIED,
       );
     }
 
