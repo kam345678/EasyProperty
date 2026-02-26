@@ -1,17 +1,31 @@
 "use client"
 
-import React, { useMemo, useState, useEffect } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { Eye, Trash2, Search } from "lucide-react"
 import { invoiceService } from "@/services/invoice.service"
 
 interface Invoice {
-  id: string
-  tenant: string
-  room: string
-  amount: number
-  period: string
-  status: "paid" | "pending"
-  date: string
+  _id: string
+  tenantId?: {
+    name?: string
+    profile?: {
+      firstName?: string
+      lastName?: string
+      fullName?: string
+    }
+  }
+  roomId?: {
+    roomNumber?: string
+  }
+  amounts?: {
+    grandTotal?: number
+  }
+  billingPeriod?: string
+  payment?: {
+    status?: "pending" | "paid_pending_review" | "paid" | "rejected" | "overdue"
+    slipUrl?: string
+  }
+  createdAt?: string
 }
 
 export default function AdminInvoicesPage() {
@@ -19,78 +33,27 @@ export default function AdminInvoicesPage() {
   const [search, setSearch] = useState("")
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
 
   // =========================
-  // Fetch invoices from backend
+  // Fetch invoices
   // =========================
+
   useEffect(() => {
 
     const fetchInvoices = async () => {
+
       try {
 
-        const data = await invoiceService.getAllInvoices()
+        setLoading(true)
 
-        console.log("Backend invoices:", data)
+        const res = await invoiceService.getAllInvoices()
 
-        if (!Array.isArray(data)) {
-          console.error("Invoices is not array:", data)
-          setInvoices([])
-          return
-        }
+        const data = Array.isArray(res)
+          ? res
+          : res?.data ?? []
 
-        const formatted: Invoice[] = data.map((inv: any, index: number) => {
-
-          // Safe unique id
-          const safeId = String(
-            inv._id ??
-            inv.id ??
-            inv.invoiceId ??
-            `invoice-${index}-${Date.now()}`
-          )
-
-          return {
-            id: safeId,
-
-            tenant: String(
-              inv.tenantName ??
-              inv.tenant ??
-              inv.user?.name ??
-              ""
-            ),
-
-            room: String(
-              inv.roomNumber ??
-              inv.room ??
-              inv.room?.number ??
-              ""
-            ),
-
-            amount: Number(
-              inv.totalAmount ??
-              inv.amount ??
-              inv.total ??
-              0
-            ),
-
-            period: String(
-              inv.period ??
-              ""
-            ),
-
-            status:
-              inv.status === "paid"
-                ? "paid"
-                : "pending",
-
-            date: String(
-              inv.createdAt ??
-              inv.date ??
-              ""
-            ),
-          }
-        })
-
-        setInvoices(formatted)
+        setInvoices(data)
 
       } catch (error) {
 
@@ -102,6 +65,7 @@ export default function AdminInvoicesPage() {
         setLoading(false)
 
       }
+
     }
 
     fetchInvoices()
@@ -109,239 +73,285 @@ export default function AdminInvoicesPage() {
   }, [])
 
   // =========================
-  // Filter Logic (Safe)
+  // Filter
   // =========================
+
   const filteredInvoices = useMemo(() => {
 
-    const lowerSearch = search.toLowerCase()
+    const lower = search.toLowerCase()
 
-    return invoices.filter(inv =>
-      (inv.id || "").toLowerCase().includes(lowerSearch) ||
-      (inv.tenant || "").toLowerCase().includes(lowerSearch) ||
-      (inv.room || "").toLowerCase().includes(lowerSearch)
-    )
+    return invoices.filter(inv => {
+
+      const tenant =
+        inv.tenantId?.profile?.fullName ||
+        `${inv.tenantId?.profile?.firstName ?? ""} ${inv.tenantId?.profile?.lastName ?? ""}` ||
+        inv.tenantId?.name ||
+        ""
+
+      const room = inv.roomId?.roomNumber ?? ""
+
+      return (
+        inv._id?.toLowerCase().includes(lower) ||
+        tenant.toLowerCase().includes(lower) ||
+        room.toLowerCase().includes(lower)
+      )
+
+    })
 
   }, [search, invoices])
 
   // =========================
   // Summary
   // =========================
+
   const total = invoices.reduce(
-    (sum, inv) => sum + (inv.amount || 0),
+    (sum, inv) => sum + (inv.amounts?.grandTotal ?? 0),
     0
   )
 
   const outstanding = invoices
-    .filter(i => i.status === "pending")
-    .reduce((sum, inv) => sum + (inv.amount || 0), 0)
-
-  // =========================
-  // Delete (frontend only)
-  // =========================
-  const handleDelete = (id: string) => {
-
-    setInvoices(prev =>
-      prev.filter(inv => inv.id !== id)
+    .filter(i => i.payment?.status === "pending")
+    .reduce(
+      (sum, inv) => sum + (inv.amounts?.grandTotal ?? 0),
+      0
     )
+
+  // =========================
+  // Delete
+  // =========================
+
+  const handleDelete = async (id: string) => {
+
+    if (!confirm("ลบบิลนี้ใช่หรือไม่?")) return
+
+    try {
+
+      await invoiceService.deleteInvoice(id)
+
+      setInvoices(prev =>
+        prev.filter(inv => inv._id !== id)
+      )
+
+    } catch (error: any) {
+
+      console.error(error)
+      alert("ไม่สามารถลบได้")
+
+    }
+
+  }
+
+  // =========================
+  // Confirm
+  // =========================
+
+  const handleConfirm = async (
+    id: string,
+    status: "paid" | "rejected"
+  ) => {
+
+    try {
+
+      await invoiceService.confirmInvoice(id, status)
+
+      setInvoices(prev =>
+        prev.map(inv =>
+          inv._id === id
+            ? {
+                ...inv,
+                payment: {
+                  ...inv.payment,
+                  status
+                }
+              }
+            : inv
+        )
+      )
+
+    } catch (error) {
+
+      console.error(error)
+
+    }
 
   }
 
   // =========================
   // Render
   // =========================
+
   return (
-    <div className="flex flex-col gap-6 p-6 bg-gray-50 min-h-screen">
+
+    <div className="p-6 space-y-6">
 
       {/* Header */}
-      <header className="bg-white border-b rounded-xl px-6 py-5 shadow-sm">
 
-        <h1 className="text-2xl font-semibold text-gray-800">
+      <div>
+        <h1 className="text-2xl font-semibold">
           Invoices Management
         </h1>
-
-        <p className="text-sm text-gray-500">
-          ดูรายการบิลทั้งหมดของผู้เช่า
+        <p className="text-gray-500 text-sm">
+          รายการบิลทั้งหมด
         </p>
+      </div>
 
-      </header>
+      {/* Summary */}
 
-      {/* Summary + Search */}
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex gap-6">
 
-        {/* Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 flex-1">
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
-
-            <p className="text-sm text-gray-500">
-              Total Revenue
-            </p>
-
-            <h2 className="text-3xl font-semibold mt-2">
-              {(total || 0).toLocaleString()} ฿
-            </h2>
-
-            <p className="text-xs text-gray-400 mt-1">
-              รายได้รวมทั้งหมด
-            </p>
-
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-red-500">
-
-            <p className="text-sm text-gray-500">
-              Outstanding Amount
-            </p>
-
-            <h2 className="text-3xl font-semibold text-red-600 mt-2">
-              {(outstanding || 0).toLocaleString()} ฿
-            </h2>
-
-            <p className="text-xs text-gray-400 mt-1">
-              ยอดค้างชำระทั้งหมด
-            </p>
-
-          </div>
-
+        <div className="bg-white p-4 rounded shadow">
+          Total: {(total ?? 0).toLocaleString()} ฿
         </div>
 
-        {/* Search */}
-        <div className="bg-white lg:w-80 mt-auto">
+        <div className="bg-white p-4 rounded shadow text-red-600">
+          Outstanding: {(outstanding ?? 0).toLocaleString()} ฿
+        </div>
 
-          <div className="relative">
+        <div className="relative ml-auto">
 
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
+          <Search
+            size={16}
+            className="absolute left-2 top-2.5 text-gray-400"
+          />
 
-            <input
-              type="text"
-              placeholder="Search invoice, tenant, room..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-          </div>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 border rounded px-3 py-2"
+            placeholder="Search..."
+          />
 
         </div>
 
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
 
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded shadow">
 
-          <table className="w-full text-sm">
+        <table className="w-full text-sm">
 
-            <thead className="bg-gray-50 text-gray-500 uppercase text-xs tracking-wider">
+          <thead>
+            <tr className="border-b">
+              <th className="p-3 text-left">Invoice</th>
+              <th className="p-3 text-left">Tenant</th>
+              <th className="p-3 text-left">Room</th>
+              <th className="p-3 text-left">Period</th>
+              <th className="p-3 text-left">Amount</th>
+              <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            {loading && (
 
               <tr>
-
-                <th className="p-4 text-left">Invoice</th>
-                <th className="p-4 text-left">Tenant</th>
-                <th className="p-4 text-left">Room</th>
-                <th className="p-4 text-left">Period</th>
-                <th className="p-4 text-left">Amount</th>
-                <th className="p-4 text-left">Status</th>
-                <th className="p-4 text-center">Action</th>
-
+                <td colSpan={7} className="p-4 text-center">
+                  Loading...
+                </td>
               </tr>
 
-            </thead>
+            )}
 
-            <tbody>
+            {!loading && filteredInvoices.map(inv => {
 
-              {loading && (
-                <tr>
-                  <td colSpan={7} className="text-center p-6">
-                    Loading...
-                  </td>
-                </tr>
-              )}
+              const tenant =
+                inv.tenantId?.profile?.fullName ||
+                `${inv.tenantId?.profile?.firstName ?? ""} ${inv.tenantId?.profile?.lastName ?? ""}` ||
+                inv.tenantId?.name ||
+                "-"
 
-              {!loading && filteredInvoices.map(inv => (
+              return (
 
-                <tr
-                  key={inv.id}
-                  className="border-t hover:bg-gray-50 transition"
-                >
+                <tr key={inv._id} className="border-b">
 
-                  <td className="p-4 font-medium text-gray-800">
-                    {inv.id}
+                  <td className="p-3">
+                    {inv._id}
                   </td>
 
-                  <td className="p-4">
-                    {inv.tenant}
+                  <td className="p-3">
+                    {tenant}
                   </td>
 
-                  <td className="p-4">
-                    {inv.room}
+                  <td className="p-3">
+                    {inv.roomId?.roomNumber ?? "-"}
                   </td>
 
-                  <td className="p-4 text-gray-600">
-                    {inv.period}
+                  <td className="p-3">
+                    {inv.billingPeriod ?? "-"}
                   </td>
 
-                  <td className="p-4 font-semibold">
-                    {(inv.amount || 0).toLocaleString()} ฿
+                  <td className="p-3">
+                    {(inv.amounts?.grandTotal ?? 0).toLocaleString()} ฿
                   </td>
 
-                  <td className="p-4">
+                  <td className="p-3">
+                    {inv.payment?.status ?? "-"}
+                  </td>
 
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        inv.status === "paid"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
+                  <td className="p-3 flex gap-2">
+
+                    <button
+                      onClick={() => setSelectedInvoice(inv)}
                     >
-                      {inv.status}
-                    </span>
-
-                  </td>
-
-                  <td className="p-4 flex justify-center gap-3">
-
-                    <button className="text-blue-600 hover:scale-110 transition">
-                      <Eye size={18} />
+                      <Eye size={18}/>
                     </button>
 
                     <button
-                      onClick={() => handleDelete(inv.id)}
-                      className="text-red-600 hover:scale-110 transition"
+                      onClick={() => handleDelete(inv._id)}
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={18}/>
                     </button>
 
                   </td>
 
                 </tr>
 
-              ))}
+              )
 
-              {!loading && filteredInvoices.length === 0 && (
+            })}
 
-                <tr>
+          </tbody>
 
-                  <td colSpan={7} className="text-center p-6 text-gray-400">
-                    No invoices found
-                  </td>
-
-                </tr>
-
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
+        </table>
 
       </div>
 
+      {/* Modal */}
+
+      {selectedInvoice && (
+
+        <div className="fixed inset-0 bg-black/40 flex justify-center items-center">
+
+          <div className="bg-white p-6 rounded w-96">
+
+            <h2 className="text-lg font-semibold mb-4">
+              Invoice Detail
+            </h2>
+
+            <p>ID: {selectedInvoice._id}</p>
+            <p>
+              Amount:
+              {(selectedInvoice.amounts?.grandTotal ?? 0).toLocaleString()} ฿
+            </p>
+
+            <button
+              onClick={() => setSelectedInvoice(null)}
+              className="mt-4 border px-3 py-1 rounded"
+            >
+              Close
+            </button>
+
+          </div>
+
+        </div>
+
+      )}
+
     </div>
+
   )
+
 }

@@ -127,6 +127,39 @@ export default function BillDetailPage() {
 
             {(status === "pending" || status === "rejected") && (
               <>
+                {/* Payment Information Section */}
+                <div className="bg-white border border-indigo-100 rounded-2xl p-5 mb-6 shadow-sm">
+                  <h3 className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">
+                    ช่องทางการโอนเงิน
+                  </h3>
+
+                  <div className="flex flex-col items-center mb-4">
+                    <img
+                      src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=EasyApartment-1234567890"
+                      alt="QR Code"
+                      className="rounded-xl border"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      สแกน QR เพื่อโอนเข้าบัญชี EasyApartment
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="font-medium">ชื่อบัญชี</span>
+                      <span>EasyApartment Co.,Ltd.</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">ธนาคาร</span>
+                      <span>ธนาคารกสิกรไทย</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">เลขที่บัญชี</span>
+                      <span>123-4-56789-0</span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="border-2 border-dashed border-indigo-200 rounded-2xl p-5 mb-6 bg-indigo-50/50 transition-colors hover:bg-indigo-50">
                   <h3 className="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">
                     <Upload size={16} /> แนบสลิปโอนเงิน

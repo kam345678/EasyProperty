@@ -41,4 +41,9 @@ export const invoiceService = {
     const res = await API.patch(`/invoices/${id}/confirm`, { status });
     return res.data;
   },
+
+  deleteInvoice: async (id: string) => {
+    const res = await API.patch(`/invoices/${id}/delete`);
+    return res.data;
+  },
 };

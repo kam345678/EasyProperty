@@ -5,6 +5,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Contract, ContractDocument } from './schemas/contract.schema';
 import { CreateContractDto } from './dto/create-contract.dto';
+import { UpdateContractDto } from './dto/update-contract.dto';
 // ต้อง import Room Schema เข้ามาด้วยเพื่อให้ TypeScript รู้จัก Type
 // import { Room, RoomDocument } from '../rooms/schemas/room.schema';
 
@@ -78,6 +79,34 @@ export class ContractsService {
     }
 
     return contract;
+  }
+
+  async findByTenantId(tenantId: string) {
+    const contract = await this.contractModel
+      .findOne({ tenantId, status: 'active' })
+      .populate('roomId')
+      .populate('tenantId')
+      .exec();
+
+    if (!contract) {
+      throw new NotFoundException('Active contract not found for this tenant');
+    }
+
+    return contract;
+  }
+
+  async update(id: string, updateDto: UpdateContractDto) {
+    const updatedContract = await this.contractModel.findByIdAndUpdate(
+      id,
+      { $set: updateDto },
+      { new: true },
+    );
+
+    if (!updatedContract) {
+      throw new NotFoundException('Contract not found');
+    }
+
+    return updatedContract;
   }
 
   async remove(id: string) {

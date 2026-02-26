@@ -1,19 +1,32 @@
-// src/maintenance/entities/maintenance.entity.ts
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'; // [cite: 59, 112]
-import { HydratedDocument } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+import { User } from 'src/users/schemas/user.schema';
+import { Room } from 'src/rooms/schema/room.schema';
 
 export type MaintenanceDocument = HydratedDocument<Maintenance>;
 
 @Schema({ timestamps: true })
 export class Maintenance {
-  @Prop({ type: String, required: true })
-  roomId: string;
+  @Prop({
+    type: Types.ObjectId,
+    ref: User.name,
+    required: true,
+  })
+  reportedBy: Types.ObjectId;
 
-  @Prop({ type: String, required: true })
-  reportedBy: string;
+  @Prop({
+    type: Types.ObjectId,
+    ref: Room.name,
+    required: true,
+  })
+  roomId: Types.ObjectId;
 
-  @Prop({ type: String, default: null })
-  assignedTo?: string;
+  @Prop({
+    type: Types.ObjectId,
+    ref: User.name,
+    default: null,
+  })
+  assignedTo?: Types.ObjectId;
 
   @Prop({ required: true })
   title: string;

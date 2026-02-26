@@ -4,10 +4,15 @@ import { useEffect, useState } from "react";
 import { getProfile } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { getMyContract } from "@/services/contracts.service";
+
 export default function Account() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
+
+  const [contract, setContract] = useState<any>(null);
+  const [contractLoading, setContractLoading] = useState(true);
 
   // password state
   const [oldPassword, setCurrentPassword] = useState("");
@@ -60,6 +65,19 @@ export default function Account() {
     }
 
     fetchUser();
+
+    async function fetchContract() {
+      try {
+        const data = await getMyContract();
+        setContract(data);
+      } catch (error) {
+        console.error("Failed to fetch contract:", error);
+      } finally {
+        setContractLoading(false);
+      }
+    }
+
+    fetchContract();
   }, []);
 
   if (loading) return <div className="p-6">Loading...</div>;
@@ -227,28 +245,40 @@ export default function Account() {
       <div className="bg-white shadow rounded-2xl p-6 space-y-4">
         <h2 className="text-xl font-bold">ข้อมูลสัญญาเช่า</h2>
 
-        <div className="text-sm space-y-2">
-          <p>
-            <strong>เลขห้อง:</strong> -
-          </p>
-          <p>
-            <strong>วันเริ่มสัญญา:</strong> -
-          </p>
-          <p>
-            <strong>วันหมดสัญญา:</strong> -
-          </p>
-          <p>
-            <strong>เงินประกัน:</strong> -
-          </p>
-        </div>
+        {contractLoading ? (
+          <div className="text-sm text-gray-500">กำลังโหลดข้อมูลสัญญา...</div>
+        ) : contract ? (
+          <div className="text-sm space-y-2">
+            <p>
+              <strong>เลขห้อง:</strong> {contract.roomId?.roomNumber || "-"}
+            </p>
+            <p>
+              <strong>วันเริ่มสัญญา:</strong>{" "}
+              {contract.startDate
+                ? new Date(contract.startDate).toLocaleDateString()
+                : "-"}
+            </p>
+            <p>
+              <strong>วันหมดสัญญา:</strong>{" "}
+              {contract.endDate
+                ? new Date(contract.endDate).toLocaleDateString()
+                : "-"}
+            </p>
+            <p>
+              <strong>เงินประกัน:</strong>{" "}
+              {contract.financials?.deposit
+                ? `฿${contract.financials.deposit.toLocaleString()}`
+                : "-"}
+            </p>
+            <p>
+              <strong>สถานะสัญญา:</strong> {contract.status || "-"}
+            </p>
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500">ไม่มีสัญญาที่ใช้งานอยู่</div>
+        )}
       </div>
-
-      {/* ================= BILLING HISTORY ================= */}
-      <div className="bg-white shadow rounded-2xl p-6 space-y-4">
-        <h2 className="text-xl font-bold">ประวัติการชำระเงิน</h2>
-
-        <div className="text-sm text-gray-500">ยังไม่มีข้อมูลการชำระเงิน</div>
-      </div>
+    
     </div>
   );
 }

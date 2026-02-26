@@ -92,16 +92,6 @@ export default function BillingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
-      {/* ── Top Bar ── */}
-      <div className="bg-gray-900 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-yellow-400" />
-          <span className="text-white font-semibold text-sm tracking-wide">ระบบจัดการห้องเช่า</span>
-        </div>
-        <span className="text-xs text-gray-400 bg-gray-800 px-3 py-1 rounded-full font-mono">Invoice Builder</span>
-      </div>
-
       <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
 
         {/* ── Page Title ── */}
